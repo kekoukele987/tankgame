@@ -28,13 +28,32 @@ class Tank(pygame.sprite.Sprite):
         self.image = pygame.Surface((self.width, self.height))
         self.image.fill(color)
         self.rect = self.image.get_rect()
-
+        self.rect.center = (x, y)
+        self.speed = speed
 
     def update(self, keys=None):
-        pass
+        # 玩家坦克控制
+        if keys:
+            self._player_control(keys)
+        # 敌方坦克简单AI（随机移动）
+        else:
+            self._enemy_ai()
 
-
-
+    def _player_control(self, keys):
+        """玩家坦克控制逻辑"""
+        # 上下左右移动
+        if keys[pygame.K_w] or keys[pygame.K_UP]:
+            self.rect.y -= self.speed
+            self.direction = "up"
+        if keys[pygame.K_s] or keys[pygame.K_DOWN]:
+            self.rect.y += self.speed
+            self.direction = "down"
+        if keys[pygame.K_a] or keys[pygame.K_LEFT]:
+            self.rect.x -= self.speed
+            self.direction = "left"
+        if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
+            self.rect.x += self.speed
+            self.direction = "right"
 
 # 主游戏函数
 def main():
@@ -54,6 +73,7 @@ def main():
 
     running = True
     while running:
+        clock.tick(FPS)
         # 1. 事件处理（必须加，否则窗口关不掉）
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -62,6 +82,11 @@ def main():
         # 3. 绘制画面（必须加，否则看不到坦克）
         screen.fill(BLACK)  # 先清空背景
         all_sprites.draw(screen)  # 绘制坦克
+
+        # 获取按键状态（用于持续移动）
+        keys = pygame.key.get_pressed()
+        # 更新所有精灵（包括玩家坦克）
+        all_sprites.update(keys)
 
         # 4. 更新显示
         pygame.display.flip() 
