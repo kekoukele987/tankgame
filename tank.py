@@ -38,6 +38,8 @@ class Tank(pygame.sprite.Sprite):
         # 敌方坦克简单AI（随机移动）
         else:
             self._enemy_ai()
+        
+        self._keep_in_bounds()
 
     def _player_control(self, keys):
         """玩家坦克控制逻辑"""
@@ -54,6 +56,17 @@ class Tank(pygame.sprite.Sprite):
         if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
             self.rect.x += self.speed
             self.direction = "right"
+
+    def _keep_in_bounds(self):
+        """确保坦克不超出窗口边界"""
+        if self.rect.left < 0:
+            self.rect.left = 0
+        if self.rect.right > SCREEN_WIDTH:
+            self.rect.right = SCREEN_WIDTH
+        if self.rect.top < 0:
+            self.rect.top = 0
+        if self.rect.bottom > SCREEN_HEIGHT:
+            self.rect.bottom = SCREEN_HEIGHT
 
 # 主游戏函数
 def main():
