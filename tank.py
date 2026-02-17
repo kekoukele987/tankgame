@@ -31,6 +31,8 @@ class Tank(pygame.sprite.Sprite):
         self.rect.center = (x, y)
         self.speed = speed
         self.direction = "up"
+        self.shoot_cooldown = 0
+
 
     def update(self, keys=None):
         # 玩家坦克控制
@@ -41,6 +43,10 @@ class Tank(pygame.sprite.Sprite):
             self._enemy_ai()
         
         self._keep_in_bounds()
+
+        # 更新子弹冷却时间
+        if self.shoot_cooldown > 0:
+            self.shoot_cooldown -= 1
 
     def _player_control(self, keys):
         """玩家坦克控制逻辑"""
@@ -86,6 +92,55 @@ class Tank(pygame.sprite.Sprite):
         elif self.direction == "right":
             self.rect.x += self.speed // 2
 
+    def shoot(self):
+        """发射子弹"""
+        if self.shoot_cooldown == 0:
+            # 计算子弹初始位置（根据坦克方向）
+            bullet_x, bullet_y = self.rect.center
+            if self.direction == "up":
+                bullet_y -= self.height // 2 + 5
+            elif self.direction == "down":
+                bullet_y += self.height // 2 + 5
+            elif self.direction == "left":
+                bullet_x -= self.width // 2 + 5
+            elif self.direction == "right":
+                bullet_x += self.width // 2 + 5
+            
+            # 创建子弹
+            bullet = Bullet(bullet_x, bullet_y, self.direction)
+            # 重置冷却时间
+            self.shoot_cooldown = 15
+            return bullet
+        return None
+
+# 子弹类
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, x, y, direction, speed=10):
+        super().__init__()
+        # 子弹大小
+        self.image = pygame.Surface((5, 5))
+        self.image.fill(YELLOW)
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
+        self.speed = speed
+        self.direction = direction
+
+    def update(self):
+        """更新子弹位置"""
+        if self.direction == "up":
+            self.rect.y -= self.speed
+        elif self.direction == "down":
+            self.rect.y += self.speed
+        elif self.direction == "left":
+            self.rect.x -= self.speed
+        elif self.direction == "right":
+            self.rect.x += self.speed
+        
+        # 子弹超出窗口则销毁
+        if (self.rect.bottom < 0 or self.rect.top > SCREEN_HEIGHT or
+            self.rect.right < 0 or self.rect.left > SCREEN_WIDTH):
+            self.kill()
+
 # 主游戏函数
 def main():
     # 创建游戏窗口
@@ -98,6 +153,8 @@ def main():
     # 创建精灵组
     all_sprites = pygame.sprite.Group()
     enemies = pygame.sprite.Group()
+
+    bullets = pygame.sprite.Group()
     
     # 创建玩家坦克（蓝色）
     player_tank = Tank(SCREEN_WIDTH//2, SCREEN_HEIGHT-100, BLUE)
@@ -118,6 +175,14 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
 
+                        # 按下空格键发射子弹
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    bullet = player_tank.shoot()
+                    if bullet:
+                        all_sprites.add(bullet)
+                        bullets.add(bullet)
+
         # 3. 绘制画面（必须加，否则看不到坦克）
         screen.fill(BLACK)  # 先清空背景
         all_sprites.draw(screen)  # 绘制坦克
@@ -128,6 +193,8 @@ def main():
         player_tank.update(keys)  # 玩家坦克传入按键
         for enemy in enemies:
             enemy.update()  # 敌方坦克无需按键
+        
+        bullets.update()
 
         # 4. 更新显示
         pygame.display.flip() 
