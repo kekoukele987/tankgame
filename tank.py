@@ -30,6 +30,7 @@ class Tank(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
         self.speed = speed
+        self.direction = "up"
 
     def update(self, keys=None):
         # 玩家坦克控制
@@ -68,6 +69,23 @@ class Tank(pygame.sprite.Sprite):
         if self.rect.bottom > SCREEN_HEIGHT:
             self.rect.bottom = SCREEN_HEIGHT
 
+    def _enemy_ai(self):
+        """简单的敌方AI：随机移动"""
+        # 随机改变移动方向（降低频率）
+        if random.randint(0, 100) < 2:
+            directions = ["up", "down", "left", "right"]
+            self.direction = random.choice(directions)
+        
+        # 根据方向移动
+        if self.direction == "up":
+            self.rect.y -= self.speed // 2  # 敌方速度慢一点
+        elif self.direction == "down":
+            self.rect.y += self.speed // 2
+        elif self.direction == "left":
+            self.rect.x -= self.speed // 2
+        elif self.direction == "right":
+            self.rect.x += self.speed // 2
+
 # 主游戏函数
 def main():
     # 创建游戏窗口
@@ -79,10 +97,18 @@ def main():
     
     # 创建精灵组
     all_sprites = pygame.sprite.Group()
+    enemies = pygame.sprite.Group()
     
     # 创建玩家坦克（蓝色）
     player_tank = Tank(SCREEN_WIDTH//2, SCREEN_HEIGHT-100, BLUE)
     all_sprites.add(player_tank)
+
+    for _ in range(3):
+        enemy_x = random.randint(50, SCREEN_WIDTH-50)
+        enemy_y = random.randint(50, SCREEN_HEIGHT//2)
+        enemy_tank = Tank(enemy_x, enemy_y, RED)
+        all_sprites.add(enemy_tank)
+        enemies.add(enemy_tank)
 
     running = True
     while running:
@@ -98,8 +124,10 @@ def main():
 
         # 获取按键状态（用于持续移动）
         keys = pygame.key.get_pressed()
-        # 更新所有精灵（包括玩家坦克）
-        all_sprites.update(keys)
+
+        player_tank.update(keys)  # 玩家坦克传入按键
+        for enemy in enemies:
+            enemy.update()  # 敌方坦克无需按键
 
         # 4. 更新显示
         pygame.display.flip() 
