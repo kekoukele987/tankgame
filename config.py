@@ -1,0 +1,36 @@
+"""
+游戏配置模块
+定义所有常量、颜色和基础设置
+"""
+import pygame
+
+# 初始化pygame（仅初始化显示模块，其他由各模块按需导入）
+pygame.display.init()
+
+# 窗口大小
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+FPS = 60
+
+# 颜色定义（RGB）
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
+YELLOW = (255, 255, 0)
+GRAY = (128, 128, 128)
+DARK_GRAY = (64, 64, 64)
+BROWN = (139, 69, 19)
+ORANGE = (255, 165, 0)
+PURPLE = (128, 0, 128)
+CYAN = (0, 255, 255)
+
+# 游戏参数
+PLAYER_SPEED = 5
+ENEMY_SPEED = 4
+BULLET_SPEED = 10
+TANK_SIZE = 40
+MAX_LEVEL = 5
+PLAYER_LIVES = 3
+INVINCIBLE_TIME = 90  # 1.5秒
