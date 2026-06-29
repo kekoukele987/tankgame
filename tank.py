@@ -413,32 +413,29 @@ def main():
     
     def generate_map():
         """生成地图障碍物"""
-        # 在中间区域生成砖墙
-        for row in range(4, 10):
-            for col in range(4, 16):
-                if (row + col) % 3 == 0 and random.random() < 0.3:
-                    wall = BrickWall(col * 40, row * 40)
+        # 在中间区域生成砖墙（避开玩家出生区域）
+        for row in range(3, 10):
+            for col in range(2, 18):
+                # 避开玩家出生区域（屏幕底部中央）
+                px, py = col * 40, row * 40
+                if py >= 440 and px >= 280 and px <= 520:
+                    continue
+                if (row + col) % 3 == 0 and random.random() < 0.25:
+                    wall = BrickWall(px, py)
                     walls.add(wall)
                     all_sprites.add(wall)
         
-        # 在周围添加一些钢铁墙
-        for i in range(3):
-            for j in range(5):
-                if random.random() < 0.2:
-                    x = 80 + i * 300
-                    y = 100 + j * 80
-                    wall = SteelWall(x, y)
-                    walls.add(wall)
-                    all_sprites.add(wall)
-        
-        # 在玩家基地周围加保护墙
-        base_x = SCREEN_WIDTH // 2 - 60
-        base_y = SCREEN_HEIGHT - 40
-        for i in range(3):
-            for j in range(2):
-                brick = BrickWall(base_x + i * 40, base_y - 100 + j * 40)
-                walls.add(brick)
-                all_sprites.add(brick)
+        # 在四周添加一些钢铁墙
+        steel_positions = [
+            (120, 120), (360, 80), (600, 120),
+            (80, 280), (680, 280),
+            (200, 400), (560, 400),
+        ]
+        for x, y in steel_positions:
+            if random.random() < 0.5:
+                wall = SteelWall(x, y)
+                walls.add(wall)
+                all_sprites.add(wall)
     
     def spawn_enemies():
         """生成敌人"""
