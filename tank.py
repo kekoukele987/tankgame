@@ -2,6 +2,7 @@ import pygame
 import random
 import sys
 import math
+from level_transition import LevelTransition
 
 # 初始化pygame
 pygame.init()
@@ -625,6 +626,12 @@ def main():
             if level > 5:
                 victory = True
             else:
+                # 播放关卡过渡动画
+                transition = LevelTransition(level, score, screen)
+                result = transition.run()
+                if not result:  # 用户关闭窗口
+                    running = False
+                # 生成新关卡
                 spawn_enemies()
                 score += 200
         
