@@ -331,6 +331,11 @@ class GameManager:
             self.running = False
             return
 
+        # 清除残留道具，防止带到下一关
+        for pu in list(self.powerups):
+            pu.kill()
+        self.powerups.empty()
+
         # 重置玩家位置到屏幕下方中间
         self.player_tank.rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT - 80)
         self.player_tank.direction = "up"
