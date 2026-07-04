@@ -10,7 +10,7 @@ from config import (
     MAX_LEVEL, PLAYER_LIVES, INVINCIBLE_TIME,
     RED, BLUE, BLACK, WHITE, GREEN, YELLOW, GRAY
 )
-from sprites import Tank, BrickWall, SteelWall, Explosion, Bullet, PowerUp, Base
+from sprites import Tank, BrickWall, SteelWall, Water, Explosion, Bullet, PowerUp, Base
 from level_transition import LevelTransition
 
 
@@ -39,6 +39,7 @@ class GameManager:
         self.enemies = pygame.sprite.Group()
         self.bullets = pygame.sprite.Group()
         self.walls = pygame.sprite.Group()
+        self.waters = pygame.sprite.Group()
         self.explosions = pygame.sprite.Group()
         self.powerups = pygame.sprite.Group()
         self.bases = pygame.sprite.Group()
@@ -58,6 +59,7 @@ class GameManager:
         self.enemies.empty()
         self.bullets.empty()
         self.walls.empty()
+        self.waters.empty()
         self.explosions.empty()
         self.powerups.empty()
         self.bases.empty()
@@ -87,6 +89,18 @@ class GameManager:
 
     def _generate_map(self):
         """生成地图障碍物"""
+        # 水地（不可通过但子弹可穿过，数量和钢铁墙差不多）
+        water_positions = [
+            (200, 200), (400, 200), (600, 200),
+            (80, 360), (240, 360), (480, 360), (680, 360),
+            (360, 480), (520, 480),
+        ]
+        for x, y in water_positions:
+            if random.random() < 0.5:
+                water = Water(x, y)
+                self.waters.add(water)
+                self.all_sprites.add(water)
+
         # 砖墙（避开玩家出生区域和底部老窝区域）
         for row in range(3, 10):
             for col in range(2, 18):
@@ -150,6 +164,10 @@ class GameManager:
                     if new_rect.colliderect(wall.rect):
                         collision = True
                         break
+                for water in self.waters:
+                    if new_rect.colliderect(water.rect):
+                        collision = True
+                        break
 
                 if not collision:
                     break
@@ -200,13 +218,14 @@ class GameManager:
         """更新所有游戏逻辑"""
         keys = pygame.key.get_pressed()
 
-        # 玩家更新
+        # 玩家更新（水和墙都是坦克不可通过的障碍）
         all_tanks = [self.player_tank] + list(self.enemies)
-        self.player_tank.update(keys, self.walls, all_tanks)
+        obstacles = list(self.walls) + list(self.waters)
+        self.player_tank.update(keys, obstacles, all_tanks)
 
         # 敌人更新 + 自动射击
         for enemy in self.enemies:
-            enemy.update(None, self.walls, all_tanks, self.player_tank)
+            enemy.update(None, obstacles, all_tanks, self.player_tank)
             if random.randint(0, 100) < 3:
                 bullet = enemy.shoot()
                 if bullet:

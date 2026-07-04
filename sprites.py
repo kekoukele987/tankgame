@@ -71,6 +71,24 @@ class SteelWall(pygame.sprite.Sprite):
         return False
 
 
+class Water(pygame.sprite.Sprite):
+    """水 - 坦克不能进入，子弹可以穿过"""
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = pygame.Surface((TANK_SIZE, TANK_SIZE))
+        self.image.fill((0, 100, 180))  # 深蓝色水底
+        # 水波纹
+        for i in range(0, TANK_SIZE, 8):
+            offset = (i // 8) % 2
+            for j in range(offset, TANK_SIZE, 16):
+                pygame.draw.ellipse(self.image, (50, 150, 220),
+                                   (j, i, 12, 6))
+                pygame.draw.ellipse(self.image, (100, 200, 255),
+                                   (j + 2, i + 2, 8, 2))
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (x, y)
+
+
 class Explosion(pygame.sprite.Sprite):
     """爆炸效果"""
     def __init__(self, x, y, size=TANK_SIZE):
