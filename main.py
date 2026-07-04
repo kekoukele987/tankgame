@@ -11,6 +11,8 @@ def main():
     """游戏主入口 - 初始化并启动游戏"""
     pygame.init()
     pygame.display.set_caption("坦克大战")
+    # 禁用输入法文本处理，防止中文输入法拦截 WASD 等按键
+    pygame.key.stop_text_input()
 
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
