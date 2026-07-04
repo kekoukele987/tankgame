@@ -87,7 +87,7 @@ class LevelTransition:
         self.screen = screen
         self.clock = pygame.time.Clock()
         self.timer = 0
-        self.duration = 180  # 3秒 (60 FPS * 3)
+        self.duration = 480  # 8秒 (60 FPS * 8)
         
         # 粒子系统
         self.particles = []
