@@ -219,14 +219,18 @@ class GameManager:
         """更新所有游戏逻辑"""
         keys = pygame.key.get_pressed()
 
-        # 玩家更新（水和墙都是坦克不可通过的障碍）
+        # 玩家更新（水和墙都是坦克不可通过的障碍，但拥有船道具时可以进入水）
         all_tanks = [self.player_tank] + list(self.enemies)
-        obstacles = list(self.walls) + list(self.waters)
-        self.player_tank.update(keys, obstacles, all_tanks)
+        full_obstacles = list(self.walls) + list(self.waters)
+        if self.player_tank.boat_mode:
+            player_obstacles = list(self.walls)  # 有船时可以无视水面
+        else:
+            player_obstacles = full_obstacles
+        self.player_tank.update(keys, player_obstacles, all_tanks)
 
-        # 敌人更新 + 自动射击
+        # 敌人更新 + 自动射击（敌人始终不能进入水面）
         for enemy in self.enemies:
-            enemy.update(None, obstacles, all_tanks, self.player_tank)
+            enemy.update(None, full_obstacles, all_tanks, self.player_tank)
             if random.randint(0, 100) < 3:
                 bullet = enemy.shoot()
                 if bullet:
@@ -253,6 +257,10 @@ class GameManager:
     def enable_gun(self):
         """手枪道具：子弹强化，可摧毁钢铁墙"""
         self.gun_powered = True
+
+    def enable_boat(self):
+        """船道具：可进入水面"""
+        self.player_tank.boat_mode = True
 
     def freeze_enemies(self):
         """冰冻所有敌人5秒"""

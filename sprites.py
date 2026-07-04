@@ -208,7 +208,7 @@ class Bullet(pygame.sprite.Sprite):
 
 class PowerUp(pygame.sprite.Sprite):
     """道具 - 击杀敌人后概率掉落"""
-    TYPES = ["freeze", "life", "bomb", "gun"]
+    TYPES = ["freeze", "life", "bomb", "gun", "boat"]
 
     def __init__(self, x, y):
         super().__init__()
@@ -274,6 +274,20 @@ class PowerUp(pygame.sprite.Sprite):
             # 扳机
             pygame.draw.rect(self.image, (150, 120, 0), (cx - 3, cy + 5, 4, 4))
 
+        elif self.type == "boat":
+            # 船图标 - 蓝色波浪上的船
+            cx, cy = self.size // 2, self.size // 2
+            # 船身
+            boat_pts = [(cx - 10, cy + 2), (cx + 10, cy + 2), (cx + 6, cy - 4), (cx - 6, cy - 4)]
+            pygame.draw.polygon(self.image, (139, 69, 19), boat_pts)
+            # 桅杆
+            pygame.draw.line(self.image, (100, 100, 100), (cx, cy - 4), (cx, cy - 10), 2)
+            # 帆
+            sail_pts = [(cx + 1, cy - 10), (cx + 8, cy - 6), (cx + 1, cy - 3)]
+            pygame.draw.polygon(self.image, (255, 255, 255), sail_pts)
+            # 水波纹
+            pygame.draw.ellipse(self.image, (50, 150, 220), (cx - 12, cy + 4, 24, 5))
+
     def update(self):
         """闪烁效果"""
         self.blink_timer += 1
@@ -288,6 +302,8 @@ class PowerUp(pygame.sprite.Sprite):
             game_manager.bomb_all_enemies()
         elif self.type == "gun":
             game_manager.enable_gun()
+        elif self.type == "boat":
+            game_manager.enable_boat()
 
     def draw_with_glow(self, screen):
         """绘制带闪烁效果的道具"""
@@ -325,6 +341,7 @@ class Tank(pygame.sprite.Sprite):
         self.invincible_time = 0
         self.blink_timer = 0
         self.frozen_time = 0  # 被冰冻剩余时间
+        self.boat_mode = False  # 船道具：可进入水面
 
     def _draw_player_tank(self):
         """绘制玩家黄色坦克（经典风格）"""
