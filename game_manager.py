@@ -12,6 +12,7 @@ from config import (
 )
 from sprites import Tank, BrickWall, SteelWall, Water, Explosion, Bullet, PowerUp, Base
 from level_transition import LevelTransition
+from map_editor import grid_to_sprites, load_map, MAP_FILE, MapEditor
 
 
 class GameManager:
@@ -564,8 +565,123 @@ class GameManager:
         self.screen.blit(tip_text,
             (SCREEN_WIDTH // 2 - tip_text.get_width() // 2, 400))
 
+    def _init_custom_level(self):
+        """使用自定义地图初始化关卡"""
+        self.all_sprites.empty()
+        self.enemies.empty()
+        self.bullets.empty()
+        self.walls.empty()
+        self.waters.empty()
+        self.explosions.empty()
+        self.powerups.empty()
+        self.bases.empty()
+
+        grid = load_map()
+        if grid is None:
+            return False
+
+        spawn_pos = grid_to_sprites(grid, self.walls, self.waters, self.bases)
+        if spawn_pos:
+            sx, sy = spawn_pos
+        else:
+            sx, sy = SCREEN_WIDTH // 2, SCREEN_HEIGHT - 80
+
+        self.player_tank = Tank(sx, sy, YELLOW)
+        self.player_tank.lives = PLAYER_LIVES
+        self.all_sprites.add(self.player_tank)
+
+        # 把所有自定义精灵加入 all_sprites
+        for wall in self.walls:
+            self.all_sprites.add(wall)
+        for water in self.waters:
+            self.all_sprites.add(water)
+        for base in self.bases:
+            self.all_sprites.add(base)
+
+        self._spawn_enemies()
+        return True
+
+    def draw_start_screen(self):
+        """开始界面"""
+        waiting = True
+        while waiting:
+            self.clock.tick(FPS)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                    return
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE or event.key == pygame.K_RETURN:
+                        waiting = False
+                    if event.key == pygame.K_c:
+                        # 进入自定义地图编辑器
+                        editor = MapEditor(self.screen)
+                        result = editor.run()
+                        if result:
+                            # 使用自定义地图开始游戏
+                            self._init_custom_level()
+                            return
+                    if event.key == pygame.K_ESCAPE:
+                        self.running = False
+                        return
+
+            self.screen.fill(BLACK)
+
+            # 绘制网格背景
+            for x in range(0, SCREEN_WIDTH, TANK_SIZE):
+                pygame.draw.line(self.screen, (20, 20, 20), (x, 0), (x, SCREEN_HEIGHT))
+            for y in range(0, SCREEN_HEIGHT, TANK_SIZE):
+                pygame.draw.line(self.screen, (20, 20, 20), (0, y), (SCREEN_WIDTH, y))
+
+            # 标题
+            title = self.font_large.render("坦 克 大 战", True, YELLOW)
+            title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 180))
+            self.screen.blit(title, title_rect)
+
+            # 装饰线条
+            pygame.draw.line(self.screen, YELLOW, (200, 210), (600, 210), 2)
+
+            # 操作说明
+            controls = [
+                "WASD / 方向键   移动",
+                "空格    射击",
+                "P    暂停",
+                "O    跳过关卡动画",
+            ]
+            y_offset = 270
+            for text in controls:
+                surf = self.font_small.render(text, True, WHITE)
+                rect = surf.get_rect(center=(SCREEN_WIDTH // 2, y_offset))
+                self.screen.blit(surf, rect)
+                y_offset += 35
+
+            # 自定义地图选项
+            has_custom = load_map() is not None
+            if has_custom:
+                custom_text = "按 C - 编辑/使用自定义地图 (已保存)"
+            else:
+                custom_text = "按 C - 创建自定义地图"
+            c_surf = self.font_small.render(custom_text, True, (0, 200, 255))
+            c_rect = c_surf.get_rect(center=(SCREEN_WIDTH // 2, y_offset + 20))
+            self.screen.blit(c_surf, c_rect)
+
+            # 闪烁提示
+            blink = (pygame.time.get_ticks() // 600) % 2 == 0
+            if blink:
+                tip = self.font_medium.render("按 空格 或 回车 开始游戏", True, (0, 255, 0))
+                tip_rect = tip.get_rect(center=(SCREEN_WIDTH // 2, 500))
+                self.screen.blit(tip, tip_rect)
+
+            pygame.display.flip()
+
     def run(self):
         """主游戏循环"""
+        # 显示开始界面
+        self.draw_start_screen()
+        if not self.running:
+            pygame.quit()
+            sys.exit()
+
         while self.running:
             self.clock.tick(FPS)
 
