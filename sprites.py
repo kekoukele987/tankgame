@@ -1,6 +1,6 @@
 """
 精灵模块
-包含所有游戏角色的类定义：坦克、子弹、墙壁、爆炸效果
+包含所有游戏角色的类定义：坦克、子弹、墙壁、爆炸效果、道具
 """
 import pygame
 import random
@@ -131,6 +131,88 @@ class Bullet(pygame.sprite.Sprite):
             self.kill()
 
 
+class PowerUp(pygame.sprite.Sprite):
+    """道具 - 击杀敌人后概率掉落"""
+    TYPES = ["freeze", "life", "bomb"]
+
+    def __init__(self, x, y):
+        super().__init__()
+        self.type = random.choice(self.TYPES)
+        self.size = 30
+        self.image = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
+        self.blink_timer = 0
+        self._draw_icon()
+
+    def _draw_icon(self):
+        """根据道具类型绘制图标"""
+        self.image.fill((0, 0, 0, 0))
+
+        # 背景闪烁圆
+        pygame.draw.circle(self.image, (255, 255, 255, 200),
+                          (self.size // 2, self.size // 2), self.size // 2)
+        pygame.draw.circle(self.image, (0, 0, 0, 200),
+                          (self.size // 2, self.size // 2), self.size // 2 - 2)
+
+        if self.type == "freeze":
+            # 雪花图标 - 蓝色
+            color = (100, 200, 255)
+            cx, cy = self.size // 2, self.size // 2
+            for angle in range(0, 360, 60):
+                rad = math.radians(angle)
+                ex = cx + int(10 * math.cos(rad))
+                ey = cy + int(10 * math.sin(rad))
+                pygame.draw.line(self.image, color, (cx, cy), (ex, ey), 2)
+            pygame.draw.circle(self.image, color, (cx, cy), 4)
+
+        elif self.type == "life":
+            # 加命图标 - 绿色 + 号
+            color = (100, 255, 100)
+            cx, cy = self.size // 2, self.size // 2
+            pygame.draw.rect(self.image, color, (cx - 4, cy - 8, 8, 16))
+            pygame.draw.rect(self.image, color, (cx - 8, cy - 4, 16, 8))
+            # 外框
+            pygame.draw.rect(self.image, (200, 255, 200),
+                            (cx - 8, cy - 8, 16, 16), 1)
+
+        elif self.type == "bomb":
+            # 炸弹图标 - 红色骷髅/炸弹
+            color = (255, 100, 100)
+            cx, cy = self.size // 2, self.size // 2
+            # 炸弹圆
+            pygame.draw.circle(self.image, color, (cx, cy), 8)
+            # 引信
+            pygame.draw.line(self.image, (200, 200, 100),
+                            (cx + 5, cy - 2), (cx + 10, cy - 8), 2)
+            pygame.draw.circle(self.image, (255, 200, 0),
+                              (cx + 10, cy - 8), 2)
+
+    def update(self):
+        """闪烁效果"""
+        self.blink_timer += 1
+
+    def apply(self, game_manager):
+        """应用道具效果"""
+        if self.type == "freeze":
+            game_manager.freeze_enemies()
+        elif self.type == "life":
+            game_manager.add_life()
+        elif self.type == "bomb":
+            game_manager.bomb_all_enemies()
+
+    def draw_with_glow(self, screen):
+        """绘制带闪烁效果的道具"""
+        alpha = 128 + int(127 * math.sin(self.blink_timer * 0.1))
+        glow = pygame.Surface((self.size + 10, self.size + 10), pygame.SRCALPHA)
+        color = (255, 255, 255, alpha // 4)
+        pygame.draw.circle(glow, color,
+                          ((self.size + 10) // 2, (self.size + 10) // 2),
+                          (self.size + 10) // 2)
+        screen.blit(glow, (self.rect.x - 5, self.rect.y - 5))
+        screen.blit(self.image, self.rect)
+
+
 class Tank(pygame.sprite.Sprite):
     """坦克基类（玩家和敌人共用）"""
     def __init__(self, x, y, color, speed=PLAYER_SPEED, enemy=False):
@@ -154,6 +236,7 @@ class Tank(pygame.sprite.Sprite):
 
         self.invincible_time = 0
         self.blink_timer = 0
+        self.frozen_time = 0  # 被冰冻剩余时间
 
     def _draw_player_tank(self):
         """绘制玩家黄色坦克（经典风格）"""
@@ -251,6 +334,14 @@ class Tank(pygame.sprite.Sprite):
             self.image.set_alpha(128 if self.blink_timer % 6 < 3 else 255)
         else:
             self.image.set_alpha(255)
+
+        # 冰冻效果
+        if self.frozen_time > 0:
+            self.frozen_time -= 1
+            # 冰冻时闪烁蓝色
+            self.image.set_alpha(180 if self.blink_timer % 4 < 2 else 255)
+            self.blink_timer += 1
+            return  # 冰冻状态不执行任何移动
 
         if not self.enemy:
             self._player_control(keys, walls, tanks)

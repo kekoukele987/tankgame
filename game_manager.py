@@ -10,7 +10,7 @@ from config import (
     MAX_LEVEL, PLAYER_LIVES, INVINCIBLE_TIME,
     RED, BLUE, BLACK, WHITE, GREEN, YELLOW, GRAY
 )
-from sprites import Tank, BrickWall, SteelWall, Explosion, Bullet
+from sprites import Tank, BrickWall, SteelWall, Explosion, Bullet, PowerUp
 from level_transition import LevelTransition
 
 
@@ -40,6 +40,7 @@ class GameManager:
         self.bullets = pygame.sprite.Group()
         self.walls = pygame.sprite.Group()
         self.explosions = pygame.sprite.Group()
+        self.powerups = pygame.sprite.Group()
 
         # 玩家
         self.player_tank = None
@@ -56,6 +57,7 @@ class GameManager:
         self.bullets.empty()
         self.walls.empty()
         self.explosions.empty()
+        self.powerups.empty()
 
         # 创建玩家（黄色，原版风格）
         self.player_tank = Tank(
@@ -182,15 +184,45 @@ class GameManager:
         # 子弹和爆炸更新
         self.bullets.update()
         self.explosions.update()
+        self.powerups.update()
 
         # 碰撞检测
         self._check_collisions()
+
+        # 道具拾取检测
+        self._check_powerup_pickup()
 
         # 敌人碰撞分离
         self._separate_enemies()
 
         # 通关检测
         self._check_level_clear()
+
+    def freeze_enemies(self):
+        """冰冻所有敌人5秒"""
+        for enemy in self.enemies:
+            enemy.frozen_time = 300  # 5秒
+
+    def add_life(self):
+        """奖一条命"""
+        self.player_tank.lives += 1
+
+    def bomb_all_enemies(self):
+        """炸死全部敌人"""
+        for enemy in list(self.enemies):
+            explosion = Explosion(enemy.rect.centerx, enemy.rect.centery)
+            self.all_sprites.add(explosion)
+            self.explosions.add(explosion)
+            self.score += 100
+            enemy.kill()
+
+    def _check_powerup_pickup(self):
+        """检测玩家拾取道具"""
+        if not self.player_tank:
+            return
+        hit = pygame.sprite.spritecollide(self.player_tank, self.powerups, True)
+        for powerup in hit:
+            powerup.apply(self)
 
     def _check_collisions(self):
         """检测所有碰撞"""
@@ -230,6 +262,16 @@ class GameManager:
         explosion = Explosion(enemy.rect.centerx, enemy.rect.centery)
         self.all_sprites.add(explosion)
         self.explosions.add(explosion)
+
+        # 20%概率掉落道具
+        if random.random() < 0.2:
+            self._spawn_powerup(enemy.rect.centerx, enemy.rect.centery)
+
+    def _spawn_powerup(self, x, y):
+        """在指定位置生成道具"""
+        powerup = PowerUp(x, y)
+        self.powerups.add(powerup)
+        self.all_sprites.add(powerup)
 
     def _on_player_hit(self, bullet):
         """敌方子弹击中玩家"""
