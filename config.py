@@ -2,10 +2,6 @@
 游戏配置模块
 定义所有常量、颜色和基础设置
 """
-import pygame
-
-# 初始化pygame（仅初始化显示模块，其他由各模块按需导入）
-pygame.display.init()
 
 # 窗口大小
 SCREEN_WIDTH = 800

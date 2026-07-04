@@ -195,7 +195,7 @@ class Tank(pygame.sprite.Sprite):
         else:
             self.image.set_alpha(255)
 
-        if keys:
+        if not self.enemy:
             self._player_control(keys, walls, tanks)
         else:
             self._enemy_ai(walls, tanks, player)
