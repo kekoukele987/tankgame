@@ -10,7 +10,7 @@ from config import (
     MAX_LEVEL, PLAYER_LIVES, INVINCIBLE_TIME,
     RED, BLUE, BLACK, WHITE, GREEN, YELLOW, GRAY
 )
-from sprites import Tank, BrickWall, SteelWall, Explosion, Bullet, PowerUp
+from sprites import Tank, BrickWall, SteelWall, Explosion, Bullet, PowerUp, Base
 from level_transition import LevelTransition
 
 
@@ -41,6 +41,7 @@ class GameManager:
         self.walls = pygame.sprite.Group()
         self.explosions = pygame.sprite.Group()
         self.powerups = pygame.sprite.Group()
+        self.bases = pygame.sprite.Group()
 
         # 玩家
         self.player_tank = None
@@ -58,6 +59,7 @@ class GameManager:
         self.walls.empty()
         self.explosions.empty()
         self.powerups.empty()
+        self.bases.empty()
 
         # 创建玩家（黄色，原版风格）
         self.player_tank = Tank(
@@ -102,6 +104,11 @@ class GameManager:
                 wall = SteelWall(x, y)
                 self.walls.add(wall)
                 self.all_sprites.add(wall)
+
+        # 生成老窝（屏幕底部中间偏右，位于玩家出生点上方）
+        base = Base(SCREEN_WIDTH // 2 + TANK_SIZE, SCREEN_HEIGHT - TANK_SIZE * 2)
+        self.bases.add(base)
+        self.all_sprites.add(base)
 
     def _spawn_enemies(self):
         """生成敌人"""
@@ -304,6 +311,35 @@ class GameManager:
                 hit = pygame.sprite.spritecollide(bullet, self.walls, False)
                 if hit:
                     self._on_wall_hit(bullet, hit)
+
+            # 任何子弹击中老窝 → 游戏结束
+            if bullet.alive() and self.bases:
+                for base in list(self.bases):
+                    if bullet.rect.colliderect(base.rect):
+                        base.kill()
+                        bullet.kill()
+                        explosion = Explosion(base.rect.centerx, base.rect.centery, size=TANK_SIZE * 2)
+                        self.all_sprites.add(explosion)
+                        self.explosions.add(explosion)
+                        self.game_over = True
+                        break
+
+        # 坦克（敌方/玩家）碰到老窝也游戏结束
+        if self.bases:
+            for base in list(self.bases):
+                if not base.alive:
+                    continue
+                # 敌方坦克碰到老窝
+                for enemy in self.enemies:
+                    if enemy.rect.colliderect(base.rect):
+                        base.kill()
+                        explosion = Explosion(base.rect.centerx, base.rect.centery, size=TANK_SIZE * 2)
+                        self.all_sprites.add(explosion)
+                        self.explosions.add(explosion)
+                        self.game_over = True
+                        break
+                if self.game_over:
+                    break
 
     def _on_enemy_hit(self, bullet, enemy):
         """玩家子弹击中敌人"""
