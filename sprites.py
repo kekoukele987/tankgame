@@ -99,7 +99,7 @@ class Base(pygame.sprite.Sprite):
     """老窝 - 被摧毁则游戏结束"""
     def __init__(self, x, y):
         super().__init__()
-        self.size = TANK_SIZE * 2
+        self.size = TANK_SIZE
         self.image = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
@@ -112,31 +112,27 @@ class Base(pygame.sprite.Sprite):
         cx, cy = self.size // 2, self.size // 2
 
         # 底座
-        pygame.draw.rect(self.image, (100, 100, 100), (cx - 25, cy + 10, 50, 15))
-        pygame.draw.rect(self.image, (150, 150, 150), (cx - 20, cy + 12, 40, 8))
+        pygame.draw.rect(self.image, (100, 100, 100), (cx - 12, cy + 6, 24, 10))
+        pygame.draw.rect(self.image, (150, 150, 150), (cx - 10, cy + 7, 20, 6))
 
         # 旗杆
-        pygame.draw.rect(self.image, (180, 180, 180), (cx - 2, cy - 20, 4, 32))
+        pygame.draw.rect(self.image, (180, 180, 180), (cx - 1, cy - 12, 3, 20))
 
         # 旗帜（三角形）
-        flag_points = [(cx + 2, cy - 20), (cx + 30, cy - 12), (cx + 2, cy - 4)]
+        flag_points = [(cx + 2, cy - 12), (cx + 16, cy - 7), (cx + 2, cy - 2)]
         pygame.draw.polygon(self.image, (255, 200, 0), flag_points)
 
         # 星星在旗帜上
-        pygame.draw.circle(self.image, (255, 255, 0), (cx + 12, cy - 12), 3)
-
-        # 老窝边框保护提示
-        pygame.draw.rect(self.image, (200, 100, 100), (0, 0, self.size, self.size), 1)
+        pygame.draw.circle(self.image, (255, 255, 0), (cx + 7, cy - 7), 2)
 
     def kill(self):
         """老窝被摧毁"""
         self.alive = False
-        # 变成红色 X 标记
         self.image.fill((0, 0, 0, 0))
         cx, cy = self.size // 2, self.size // 2
-        pygame.draw.line(self.image, (255, 0, 0), (cx - 20, cy - 20), (cx + 20, cy + 20), 4)
-        pygame.draw.line(self.image, (255, 0, 0), (cx + 20, cy - 20), (cx - 20, cy + 20), 4)
-        pygame.draw.rect(self.image, (100, 50, 50), (cx - 25, cy + 10, 50, 15))
+        pygame.draw.line(self.image, (255, 0, 0), (cx - 10, cy - 10), (cx + 10, cy + 10), 3)
+        pygame.draw.line(self.image, (255, 0, 0), (cx + 10, cy - 10), (cx - 10, cy + 10), 3)
+        pygame.draw.rect(self.image, (100, 50, 50), (cx - 12, cy + 6, 24, 10))
         super().kill()
 
 

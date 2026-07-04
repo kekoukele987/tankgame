@@ -61,9 +61,13 @@ class GameManager:
         self.powerups.empty()
         self.bases.empty()
 
-        # 创建玩家（黄色，原版风格）
+        # 创建玩家（黄色，原版风格）- 出生在老窝左侧
+        spawn_col = 8
+        spawn_row = 14
         self.player_tank = Tank(
-            SCREEN_WIDTH // 2, SCREEN_HEIGHT - 80, YELLOW
+            spawn_col * TANK_SIZE + TANK_SIZE // 2,
+            spawn_row * TANK_SIZE + TANK_SIZE // 2,
+            YELLOW
         )
         self.player_tank.lives = PLAYER_LIVES
         self.all_sprites.add(self.player_tank)
@@ -82,12 +86,10 @@ class GameManager:
 
     def _generate_map(self):
         """生成地图障碍物"""
-        # 砖墙（避开玩家出生区域）
+        # 砖墙（避开玩家出生区域和底部老窝区域）
         for row in range(3, 10):
             for col in range(2, 18):
                 px, py = col * TANK_SIZE, row * TANK_SIZE
-                if py >= 440 and 280 <= px <= 520:
-                    continue
                 if (row + col) % 3 == 0 and random.random() < 0.25:
                     wall = BrickWall(px, py)
                     self.walls.add(wall)
@@ -105,10 +107,26 @@ class GameManager:
                 self.walls.add(wall)
                 self.all_sprites.add(wall)
 
-        # 生成老窝（屏幕底部中间偏右，位于玩家出生点上方）
-        base = Base(SCREEN_WIDTH // 2 + TANK_SIZE, SCREEN_HEIGHT - TANK_SIZE * 2)
+        # 生成老窝（屏幕底部中间，对齐网格）
+        base_col = 10
+        base_row = 14
+        bx = base_col * TANK_SIZE + TANK_SIZE // 2
+        by = base_row * TANK_SIZE + TANK_SIZE // 2
+        base = Base(bx, by)
         self.bases.add(base)
         self.all_sprites.add(base)
+
+        # 老窝周围一圈砖墙保护（3x3 格，老窝在正中央）
+        for dr in range(-1, 2):
+            for dc in range(-1, 2):
+                if dr == 0 and dc == 0:
+                    continue  # 老窝自身位置不留墙
+                wx = (base_col + dc) * TANK_SIZE
+                wy = (base_row + dr) * TANK_SIZE
+                if 0 <= wx < SCREEN_WIDTH and 0 <= wy < SCREEN_HEIGHT:
+                    wall = BrickWall(wx, wy)
+                    self.walls.add(wall)
+                    self.all_sprites.add(wall)
 
     def _spawn_enemies(self):
         """生成敌人"""
@@ -318,7 +336,7 @@ class GameManager:
                     if bullet.rect.colliderect(base.rect):
                         base.kill()
                         bullet.kill()
-                        explosion = Explosion(base.rect.centerx, base.rect.centery, size=TANK_SIZE * 2)
+                        explosion = Explosion(base.rect.centerx, base.rect.centery, size=TANK_SIZE)
                         self.all_sprites.add(explosion)
                         self.explosions.add(explosion)
                         self.game_over = True
@@ -333,7 +351,7 @@ class GameManager:
                 for enemy in self.enemies:
                     if enemy.rect.colliderect(base.rect):
                         base.kill()
-                        explosion = Explosion(base.rect.centerx, base.rect.centery, size=TANK_SIZE * 2)
+                        explosion = Explosion(base.rect.centerx, base.rect.centery, size=TANK_SIZE)
                         self.all_sprites.add(explosion)
                         self.explosions.add(explosion)
                         self.game_over = True
@@ -372,7 +390,12 @@ class GameManager:
         if self.player_tank.lives <= 0:
             self.game_over = True
         else:
-            self.player_tank.rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT - 80)
+            spawn_col = 8
+            spawn_row = 14
+            self.player_tank.rect.center = (
+                spawn_col * TANK_SIZE + TANK_SIZE // 2,
+                spawn_row * TANK_SIZE + TANK_SIZE // 2
+            )
             self.player_tank.invincible_time = INVINCIBLE_TIME
 
     def _on_wall_hit(self, bullet, walls_hit):
@@ -423,8 +446,13 @@ class GameManager:
             pu.kill()
         self.powerups.empty()
 
-        # 重置玩家位置到屏幕下方中间
-        self.player_tank.rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT - 80)
+        # 重置玩家位置到老窝左侧出生点
+        spawn_col = 8
+        spawn_row = 14
+        self.player_tank.rect.center = (
+            spawn_col * TANK_SIZE + TANK_SIZE // 2,
+            spawn_row * TANK_SIZE + TANK_SIZE // 2
+        )
         self.player_tank.direction = "up"
         self.player_tank.update_image()
 
