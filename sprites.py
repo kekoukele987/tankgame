@@ -155,35 +155,92 @@ class Tank(pygame.sprite.Sprite):
         self.invincible_time = 0
         self.blink_timer = 0
 
-    def update_image(self):
-        """更新坦克图像，包括炮管方向"""
+    def _draw_player_tank(self):
+        """绘制玩家黄色坦克（经典风格）"""
         self.image = pygame.Surface((self.width, self.height))
-        self.image.fill(self.color)
+        self.image.fill(BLACK)
 
-        # 画履带
-        pygame.draw.rect(self.image, DARK_GRAY, (2, 2, 8, 36))
-        pygame.draw.rect(self.image, DARK_GRAY, (30, 2, 8, 36))
-        for i in range(0, 36, 6):
-            pygame.draw.rect(self.image, (80, 80, 80), (3, i + 2, 6, 3))
-            pygame.draw.rect(self.image, (80, 80, 80), (31, i + 2, 6, 3))
+        # 坦克主体（中央方块）
+        body_color = self.color  # 黄色
+        body_rect = pygame.Rect(4, 4, 32, 32)
+        pygame.draw.rect(self.image, body_color, body_rect)
+        pygame.draw.rect(self.image, (200, 200, 0), body_rect, 1)
 
-        # 炮塔底座
-        pygame.draw.circle(self.image, self.color, (20, 20), 12)
-        pygame.draw.circle(self.image, WHITE, (20, 20), 10, 1)
-        pygame.draw.circle(self.image, DARK_GRAY, (20, 20), 8)
+        # 履带（两侧）
+        track_color = (80, 80, 80)
+        pygame.draw.rect(self.image, DARK_GRAY, (0, 4, 8, 32))
+        pygame.draw.rect(self.image, DARK_GRAY, (32, 4, 8, 32))
+        for i in range(0, 32, 6):
+            pygame.draw.rect(self.image, track_color, (1, i + 5, 6, 3))
+            pygame.draw.rect(self.image, track_color, (33, i + 5, 6, 3))
+
+        # 炮塔底座（圆形）
+        pygame.draw.circle(self.image, body_color, (20, 20), 10)
+        pygame.draw.circle(self.image, (200, 200, 0), (20, 20), 9, 1)
 
         # 画炮管
-        barrel_length = 18
+        barrel_length = 16
         barrel_width = 6
 
         if self.direction == "up":
-            pygame.draw.rect(self.image, GRAY, (17, 2, barrel_width, barrel_length))
+            pygame.draw.rect(self.image, GRAY, (17, 0, barrel_width, barrel_length))
+            pygame.draw.rect(self.image, WHITE, (17, 0, barrel_width, 2))
         elif self.direction == "down":
-            pygame.draw.rect(self.image, GRAY, (17, 20, barrel_width, barrel_length))
+            pygame.draw.rect(self.image, GRAY, (17, 24, barrel_width, barrel_length))
+            pygame.draw.rect(self.image, WHITE, (17, 38, barrel_width, 2))
         elif self.direction == "left":
-            pygame.draw.rect(self.image, GRAY, (2, 17, barrel_length, barrel_width))
+            pygame.draw.rect(self.image, GRAY, (0, 17, barrel_length, barrel_width))
+            pygame.draw.rect(self.image, WHITE, (0, 17, 2, barrel_width))
         elif self.direction == "right":
-            pygame.draw.rect(self.image, GRAY, (20, 17, barrel_length, barrel_width))
+            pygame.draw.rect(self.image, GRAY, (24, 17, barrel_length, barrel_width))
+            pygame.draw.rect(self.image, WHITE, (38, 17, 2, barrel_width))
+
+    def _draw_enemy_tank(self):
+        """绘制敌方红色坦克（经典风格）"""
+        self.image = pygame.Surface((self.width, self.height))
+        self.image.fill(BLACK)
+
+        # 坦克主体
+        body_color = self.color  # 红色
+        body_rect = pygame.Rect(4, 4, 32, 32)
+        pygame.draw.rect(self.image, body_color, body_rect)
+        pygame.draw.rect(self.image, (180, 0, 0), body_rect, 1)
+
+        # 履带（两侧）
+        track_color = (80, 80, 80)
+        pygame.draw.rect(self.image, DARK_GRAY, (0, 4, 8, 32))
+        pygame.draw.rect(self.image, DARK_GRAY, (32, 4, 8, 32))
+        for i in range(0, 32, 6):
+            pygame.draw.rect(self.image, track_color, (1, i + 5, 6, 3))
+            pygame.draw.rect(self.image, track_color, (33, i + 5, 6, 3))
+
+        # 炮塔底座（圆形）
+        pygame.draw.circle(self.image, body_color, (20, 20), 10)
+        pygame.draw.circle(self.image, (180, 0, 0), (20, 20), 9, 1)
+
+        # 画炮管
+        barrel_length = 16
+        barrel_width = 6
+
+        if self.direction == "up":
+            pygame.draw.rect(self.image, GRAY, (17, 0, barrel_width, barrel_length))
+            pygame.draw.rect(self.image, WHITE, (17, 0, barrel_width, 2))
+        elif self.direction == "down":
+            pygame.draw.rect(self.image, GRAY, (17, 24, barrel_width, barrel_length))
+            pygame.draw.rect(self.image, WHITE, (17, 38, barrel_width, 2))
+        elif self.direction == "left":
+            pygame.draw.rect(self.image, GRAY, (0, 17, barrel_length, barrel_width))
+            pygame.draw.rect(self.image, WHITE, (0, 17, 2, barrel_width))
+        elif self.direction == "right":
+            pygame.draw.rect(self.image, GRAY, (24, 17, barrel_length, barrel_width))
+            pygame.draw.rect(self.image, WHITE, (38, 17, 2, barrel_width))
+
+    def update_image(self):
+        """更新坦克图像，包括炮管方向"""
+        if self.enemy:
+            self._draw_enemy_tank()
+        else:
+            self._draw_player_tank()
 
     def update(self, keys=None, walls=None, tanks=None, player=None):
         """更新状态"""

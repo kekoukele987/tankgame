@@ -57,9 +57,9 @@ class GameManager:
         self.walls.empty()
         self.explosions.empty()
 
-        # 创建玩家
+        # 创建玩家（黄色，原版风格）
         self.player_tank = Tank(
-            SCREEN_WIDTH // 2, SCREEN_HEIGHT - 80, BLUE
+            SCREEN_WIDTH // 2, SCREEN_HEIGHT - 80, YELLOW
         )
         self.player_tank.lives = PLAYER_LIVES
         self.all_sprites.add(self.player_tank)
