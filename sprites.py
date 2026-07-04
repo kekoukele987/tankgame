@@ -49,7 +49,7 @@ class BrickWall(pygame.sprite.Sprite):
 
 
 class SteelWall(pygame.sprite.Sprite):
-    """钢铁墙 - 不可摧毁"""
+    """钢铁墙 - 默认不可摧毁，强化子弹可摧毁"""
     def __init__(self, x, y):
         super().__init__()
         self.image = pygame.Surface((TANK_SIZE, TANK_SIZE))
@@ -59,6 +59,16 @@ class SteelWall(pygame.sprite.Sprite):
         pygame.draw.circle(self.image, WHITE, (20, 20), 8, 2)
         self.rect = self.image.get_rect()
         self.rect.topleft = (x, y)
+        self.health = 1  # 需要强化子弹才能击毁
+        self.steel = True
+
+    def hit(self):
+        """被强化子弹击中"""
+        self.health -= 1
+        if self.health <= 0:
+            self.kill()
+            return True
+        return False
 
 
 class Explosion(pygame.sprite.Sprite):
@@ -138,22 +148,28 @@ class Base(pygame.sprite.Sprite):
 
 class Bullet(pygame.sprite.Sprite):
     """子弹"""
-    def __init__(self, x, y, direction, speed=BULLET_SPEED, enemy=False):
+    def __init__(self, x, y, direction, speed=BULLET_SPEED, enemy=False, powered=False):
         super().__init__()
-        self.image = pygame.Surface((8, 8))
+        size = 12 if powered else 8
+        self.image = pygame.Surface((size, size))
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
-        self.speed = speed
+        self.speed = speed * 2 if powered else speed
         self.direction = direction
         self.enemy = enemy
+        self.powered = powered
 
         # 子弹外观
         if enemy:
             self.image.fill(RED)
-            pygame.draw.circle(self.image, YELLOW, (4, 4), 3)
+            pygame.draw.circle(self.image, YELLOW, (size // 2, size // 2), 3)
         else:
-            self.image.fill(YELLOW)
-            pygame.draw.circle(self.image, WHITE, (4, 4), 3)
+            if powered:
+                self.image.fill((255, 200, 0))  # 亮金色
+                pygame.draw.circle(self.image, WHITE, (size // 2, size // 2), 4)
+            else:
+                self.image.fill(YELLOW)
+                pygame.draw.circle(self.image, WHITE, (size // 2, size // 2), 3)
 
     def update(self):
         """更新子弹位置"""
@@ -174,7 +190,7 @@ class Bullet(pygame.sprite.Sprite):
 
 class PowerUp(pygame.sprite.Sprite):
     """道具 - 击杀敌人后概率掉落"""
-    TYPES = ["freeze", "life", "bomb"]
+    TYPES = ["freeze", "life", "bomb", "gun"]
 
     def __init__(self, x, y):
         super().__init__()
@@ -229,6 +245,17 @@ class PowerUp(pygame.sprite.Sprite):
             pygame.draw.circle(self.image, (255, 200, 0),
                               (cx + 10, cy - 8), 2)
 
+        elif self.type == "gun":
+            # 手枪图标 - 金色
+            color = (255, 215, 0)
+            cx, cy = self.size // 2, self.size // 2
+            # 枪管
+            pygame.draw.rect(self.image, color, (cx + 2, cy - 3, 12, 6))
+            # 枪身
+            pygame.draw.rect(self.image, (200, 170, 0), (cx - 6, cy - 5, 10, 10))
+            # 扳机
+            pygame.draw.rect(self.image, (150, 120, 0), (cx - 3, cy + 5, 4, 4))
+
     def update(self):
         """闪烁效果"""
         self.blink_timer += 1
@@ -241,6 +268,8 @@ class PowerUp(pygame.sprite.Sprite):
             game_manager.add_life()
         elif self.type == "bomb":
             game_manager.bomb_all_enemies()
+        elif self.type == "gun":
+            game_manager.enable_gun()
 
     def draw_with_glow(self, screen):
         """绘制带闪烁效果的道具"""

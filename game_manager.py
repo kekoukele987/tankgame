@@ -45,6 +45,7 @@ class GameManager:
 
         # 玩家
         self.player_tank = None
+        self.gun_powered = False  # 手枪道具强化状态
 
         # 初始化第一关
         self._init_level()
@@ -90,7 +91,7 @@ class GameManager:
         for row in range(3, 10):
             for col in range(2, 18):
                 px, py = col * TANK_SIZE, row * TANK_SIZE
-                if (row + col) % 3 == 0 and random.random() < 0.25:
+                if (row + col) % 2 == 1 and random.random() < 0.4:
                     wall = BrickWall(px, py)
                     self.walls.add(wall)
                     self.all_sprites.add(wall)
@@ -174,6 +175,12 @@ class GameManager:
                 if event.key == pygame.K_SPACE and not self._is_game_stopped():
                     bullet = self.player_tank.shoot()
                     if bullet:
+                        if not bullet.enemy and self.gun_powered:
+                            # 替换为强化子弹：速度2倍，可摧毁钢铁墙
+                            self.bullets.remove(bullet)
+                            self.all_sprites.remove(bullet)
+                            bullet = Bullet(bullet.rect.centerx, bullet.rect.centery,
+                                           bullet.direction, bullet.speed, enemy=False, powered=True)
                         self.all_sprites.add(bullet)
                         self.bullets.add(bullet)
 
@@ -222,6 +229,10 @@ class GameManager:
 
         # 通关检测
         self._check_level_clear()
+
+    def enable_gun(self):
+        """手枪道具：子弹强化，可摧毁钢铁墙"""
+        self.gun_powered = True
 
     def freeze_enemies(self):
         """冰冻所有敌人5秒"""
@@ -403,6 +414,9 @@ class GameManager:
         bullet.kill()
         for wall in walls_hit:
             if hasattr(wall, 'hit'):
+                # 强化子弹可以摧毁钢铁墙，普通子弹不能
+                if getattr(wall, 'steel', False) and not bullet.powered:
+                    continue
                 wall.hit()
 
     def _separate_enemies(self):
@@ -441,7 +455,8 @@ class GameManager:
             self.running = False
             return
 
-        # 清除残留道具，防止带到下一关
+        # 清除残留道具和强化状态，防止带到下一关
+        self.gun_powered = False
         for pu in list(self.powerups):
             pu.kill()
         self.powerups.empty()
