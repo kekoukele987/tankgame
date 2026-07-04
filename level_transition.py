@@ -237,6 +237,9 @@ class LevelTransition:
 
     def run(self):
         """运行动画循环，返回是否完成"""
+        # 清空残留事件，防止上一轮的按键（如空格）跳过动画
+        pygame.event.clear()
+        
         run_anim = True
         while run_anim:
             self.clock.tick(FPS)

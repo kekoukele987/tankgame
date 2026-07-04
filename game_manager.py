@@ -106,7 +106,7 @@ class GameManager:
         enemy_count = min(4 + self.level, 8)
 
         for _ in range(enemy_count):
-            while True:
+            for _ in range(100):  # 最多尝试100次找一个空位
                 ex = random.randint(60, SCREEN_WIDTH - 60)
                 ey = random.randint(40, 200)
                 new_rect = pygame.Rect(ex - 20, ey - 20, TANK_SIZE, TANK_SIZE)
@@ -116,6 +116,10 @@ class GameManager:
                     collision = True
                 for enemy in self.enemies:
                     if new_rect.colliderect(enemy.rect):
+                        collision = True
+                        break
+                for wall in self.walls:
+                    if new_rect.colliderect(wall.rect):
                         collision = True
                         break
 
@@ -284,6 +288,11 @@ class GameManager:
         if not result:
             self.running = False
             return
+
+        # 重置玩家位置到屏幕下方中间
+        self.player_tank.rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT - 80)
+        self.player_tank.direction = "up"
+        self.player_tank.update_image()
 
         # 生成新关卡
         self._spawn_enemies()
