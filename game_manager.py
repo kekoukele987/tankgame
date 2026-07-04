@@ -224,12 +224,63 @@ class GameManager:
         for powerup in hit:
             powerup.apply(self)
 
+    def _check_bullet_collision(self, player_bullet, enemy_bullet):
+        """检测敌我子弹是否在同一条线上相向而行，是则抵消"""
+        pb = player_bullet
+        eb = enemy_bullet
+
+        # 必须是相反方向
+        opposite_pairs = [("up", "down"), ("down", "up"), ("left", "right"), ("right", "left")]
+        if (pb.direction, eb.direction) not in opposite_pairs:
+            return False
+
+        # 垂直方向：x 坐标相近（在同一竖线上）
+        if pb.direction in ("up", "down"):
+            if abs(pb.rect.centerx - eb.rect.centerx) < 20:
+                # 垂直方向有重叠或即将重叠
+                if abs(pb.rect.centery - eb.rect.centery) < 30:
+                    return True
+        # 水平方向：y 坐标相近（在同一横线上）
+        else:
+            if abs(pb.rect.centery - eb.rect.centery) < 20:
+                if abs(pb.rect.centerx - eb.rect.centerx) < 30:
+                    return True
+
+        return False
+
     def _check_collisions(self):
         """检测所有碰撞"""
         players_hit = False
 
+        player_bullets = []
+        enemy_bullets = []
+
         for bullet in list(self.bullets):
-            if not bullet.enemy:  # 玩家子弹
+            if not bullet.enemy:
+                player_bullets.append(bullet)
+            else:
+                enemy_bullets.append(bullet)
+
+        # 敌我子弹抵消检测
+        bullets_to_remove = set()
+        for pb in player_bullets:
+            for eb in enemy_bullets:
+                if pb not in bullets_to_remove and eb not in bullets_to_remove:
+                    if self._check_bullet_collision(pb, eb):
+                        bullets_to_remove.add(pb)
+                        bullets_to_remove.add(eb)
+                        explosion = Explosion((pb.rect.centerx + eb.rect.centerx) // 2,
+                                              (pb.rect.centery + eb.rect.centery) // 2,
+                                              size=20)
+                        self.all_sprites.add(explosion)
+                        self.explosions.add(explosion)
+                        break
+
+        for bullet in bullets_to_remove:
+            bullet.kill()
+
+        for bullet in list(self.bullets):
+            if bullet not in bullets_to_remove and not bullet.enemy:  # 玩家子弹
                 # 击中敌人
                 hit = pygame.sprite.spritecollide(bullet, self.enemies, False)
                 if hit:
@@ -241,7 +292,7 @@ class GameManager:
                 if hit:
                     self._on_wall_hit(bullet, hit)
 
-            else:  # 敌方子弹
+            elif bullet not in bullets_to_remove:  # 敌方子弹
                 # 击中玩家
                 if (bullet.rect.colliderect(self.player_tank.rect) and
                     self.player_tank.invincible_time <= 0 and not players_hit):

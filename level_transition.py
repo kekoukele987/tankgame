@@ -228,7 +228,7 @@ class LevelTransition:
         
         # 闪烁提示
         if self.tip_blink:
-            tip_text = f"关卡 {self.level} 将在 {max(1, (self.duration - self.timer) // 60 + 1)} 秒后开始..."
+            tip_text = f"关卡 {self.level} 将在 {max(1, (self.duration - self.timer) // 60 + 1)} 秒后开始... (按 O 跳过)"
             tip_surf = self.font_small.render(tip_text, True, GRAY)
             tip_rect = tip_surf.get_rect(
                 center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 60)
@@ -249,7 +249,7 @@ class LevelTransition:
                 if event.type == pygame.QUIT:
                     return False
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_SPACE or event.key == pygame.K_RETURN:
+                    if event.key == pygame.K_o:
                         run_anim = False
             
             self.update()
