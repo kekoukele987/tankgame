@@ -132,7 +132,7 @@ class GameManager:
         self.bases.add(base)
         self.all_sprites.add(base)
 
-        # 老窝周围一圈砖墙保护（3x3 格，老窝在正中央）
+        # 老窝周围一圈保护（3x3 格，老窝在正中央）
         for dr in range(-1, 2):
             for dc in range(-1, 2):
                 if dr == 0 and dc == 0:
@@ -140,7 +140,11 @@ class GameManager:
                 wx = (base_col + dc) * TANK_SIZE
                 wy = (base_row + dr) * TANK_SIZE
                 if 0 <= wx < SCREEN_WIDTH and 0 <= wy < SCREEN_HEIGHT:
-                    wall = BrickWall(wx, wy)
+                    # 老窝正前方（上方）为钢铁墙，其余为砖墙
+                    if dr == -1 and dc == 0:
+                        wall = SteelWall(wx, wy)
+                    else:
+                        wall = BrickWall(wx, wy)
                     self.walls.add(wall)
                     self.all_sprites.add(wall)
 
@@ -483,23 +487,39 @@ class GameManager:
             self.running = False
             return
 
-        # 清除残留道具和强化状态，防止带到下一关
+        # 清除残留道具、强化状态和旧地图，防止带到下一关
         self.gun_powered = False
         for pu in list(self.powerups):
             pu.kill()
         self.powerups.empty()
+        self.walls.empty()
+        self.waters.empty()
+        self.bases.empty()
+        self.all_sprites.empty()
 
-        # 重置玩家位置到老窝左侧出生点
+        # 重新生成完整地图
+        self._generate_map()
+
+        # 重置并重新添加玩家到老窝左侧出生点
         spawn_col = 8
         spawn_row = 14
-        self.player_tank.rect.center = (
+        self.player_tank = Tank(
             spawn_col * TANK_SIZE + TANK_SIZE // 2,
-            spawn_row * TANK_SIZE + TANK_SIZE // 2
+            spawn_row * TANK_SIZE + TANK_SIZE // 2,
+            YELLOW
         )
-        self.player_tank.direction = "up"
-        self.player_tank.update_image()
+        self.player_tank.lives = PLAYER_LIVES
+        self.all_sprites.add(self.player_tank)
 
-        # 生成新关卡
+        # 重新添加所有地图精灵
+        for wall in self.walls:
+            self.all_sprites.add(wall)
+        for water in self.waters:
+            self.all_sprites.add(water)
+        for base in self.bases:
+            self.all_sprites.add(base)
+
+        # 生成新敌人
         self._spawn_enemies()
         self.score += 200
 
