@@ -344,84 +344,171 @@ class Tank(pygame.sprite.Sprite):
         self.boat_mode = False  # 船道具：可进入水面
 
     def _draw_player_tank(self):
-        """绘制玩家黄色坦克（经典风格）"""
+        """绘制玩家黄色坦克（仿经典坦克大战风格）"""
         self.image = pygame.Surface((self.width, self.height))
         self.image.fill(BLACK)
 
-        # 坦克主体（中央方块）
-        body_color = self.color  # 黄色
-        body_rect = pygame.Rect(4, 4, 32, 32)
-        pygame.draw.rect(self.image, body_color, body_rect)
-        pygame.draw.rect(self.image, (200, 200, 0), body_rect, 1)
+        # === 履带（两侧深色履带 + 履带纹路） ===
+        track_dark = (50, 50, 50)       # 履带底色
+        track_light = (110, 110, 110)   # 履带凸起纹
+        # 左履带
+        pygame.draw.rect(self.image, track_dark, (0, 2, 9, 36))
+        for i in range(0, 36, 5):
+            pygame.draw.rect(self.image, track_light, (1, 3 + i, 7, 2))
+        # 右履带
+        pygame.draw.rect(self.image, track_dark, (31, 2, 9, 36))
+        for i in range(0, 36, 5):
+            pygame.draw.rect(self.image, track_light, (32, 3 + i, 7, 2))
 
-        # 履带（两侧）
-        track_color = (80, 80, 80)
-        pygame.draw.rect(self.image, DARK_GRAY, (0, 4, 8, 32))
-        pygame.draw.rect(self.image, DARK_GRAY, (32, 4, 8, 32))
-        for i in range(0, 32, 6):
-            pygame.draw.rect(self.image, track_color, (1, i + 5, 6, 3))
-            pygame.draw.rect(self.image, track_color, (33, i + 5, 6, 3))
+        # === 车身主体 ===
+        body_dark = (180, 160, 0)       # 车身暗面（边缘）
+        body_main = (230, 210, 0)       # 车身主色
+        body_light = (255, 240, 100)    # 车身亮面（高光）
 
-        # 炮塔底座（圆形）
-        pygame.draw.circle(self.image, body_color, (20, 20), 10)
-        pygame.draw.circle(self.image, (200, 200, 0), (20, 20), 9, 1)
+        # 车身主体矩形（左履带右边 到 右履带左边）
+        body_rect = pygame.Rect(9, 4, 22, 32)
+        pygame.draw.rect(self.image, body_main, body_rect)
 
-        # 画炮管
-        barrel_length = 16
-        barrel_width = 6
+        # 车身顶部高光条
+        pygame.draw.rect(self.image, body_light, (10, 5, 20, 4))
+
+        # 车身底部暗边
+        pygame.draw.rect(self.image, body_dark, (9, 33, 22, 3))
+
+        # 车身左右边缘暗线
+        pygame.draw.line(self.image, body_dark, (9, 5), (9, 35), 1)
+        pygame.draw.line(self.image, body_dark, (30, 5), (30, 35), 1)
+
+        # 车身中间分界线（模拟两块装甲板拼接）
+        pygame.draw.line(self.image, body_dark, (20, 8), (20, 30), 1)
+
+        # === 炮塔（半圆形穹顶） ===
+        turret_dark = (170, 150, 0)
+        turret_main = (240, 220, 50)
+        turret_light = (255, 250, 180)
+
+        # 炮塔底座圆
+        pygame.draw.circle(self.image, turret_dark, (20, 20), 11)
+        pygame.draw.circle(self.image, turret_main, (20, 20), 9)
+        # 炮塔高光（左上小弧）
+        pygame.draw.circle(self.image, turret_light, (18, 18), 4)
+
+        # === 炮管 ===
+        barrel_dark = (100, 100, 100)   # 炮管暗面
+        barrel_main = (160, 160, 160)   # 炮管主色
+        barrel_light = (210, 210, 210)  # 炮管高光
 
         if self.direction == "up":
-            pygame.draw.rect(self.image, GRAY, (17, 0, barrel_width, barrel_length))
-            pygame.draw.rect(self.image, WHITE, (17, 0, barrel_width, 2))
+            # 炮管座（连接炮塔的部分）
+            pygame.draw.rect(self.image, barrel_dark, (16, 5, 8, 8))
+            pygame.draw.rect(self.image, barrel_main, (17, 5, 6, 7))
+            # 炮管主体
+            pygame.draw.rect(self.image, barrel_main, (17, 0, 6, 7))
+            pygame.draw.rect(self.image, barrel_light, (18, 0, 2, 6))
+            # 炮口
+            pygame.draw.rect(self.image, barrel_dark, (17, 0, 6, 2))
+
         elif self.direction == "down":
-            pygame.draw.rect(self.image, GRAY, (17, 24, barrel_width, barrel_length))
-            pygame.draw.rect(self.image, WHITE, (17, 38, barrel_width, 2))
+            pygame.draw.rect(self.image, barrel_dark, (16, 27, 8, 8))
+            pygame.draw.rect(self.image, barrel_main, (17, 28, 6, 7))
+            pygame.draw.rect(self.image, barrel_main, (17, 33, 6, 7))
+            pygame.draw.rect(self.image, barrel_light, (18, 34, 2, 6))
+            pygame.draw.rect(self.image, barrel_dark, (17, 38, 6, 2))
+
         elif self.direction == "left":
-            pygame.draw.rect(self.image, GRAY, (0, 17, barrel_length, barrel_width))
-            pygame.draw.rect(self.image, WHITE, (0, 17, 2, barrel_width))
+            pygame.draw.rect(self.image, barrel_dark, (5, 16, 8, 8))
+            pygame.draw.rect(self.image, barrel_main, (5, 17, 7, 6))
+            pygame.draw.rect(self.image, barrel_main, (0, 17, 7, 6))
+            pygame.draw.rect(self.image, barrel_light, (0, 18, 6, 2))
+            pygame.draw.rect(self.image, barrel_dark, (0, 17, 2, 6))
+
         elif self.direction == "right":
-            pygame.draw.rect(self.image, GRAY, (24, 17, barrel_length, barrel_width))
-            pygame.draw.rect(self.image, WHITE, (38, 17, 2, barrel_width))
+            pygame.draw.rect(self.image, barrel_dark, (27, 16, 8, 8))
+            pygame.draw.rect(self.image, barrel_main, (28, 17, 7, 6))
+            pygame.draw.rect(self.image, barrel_main, (33, 17, 7, 6))
+            pygame.draw.rect(self.image, barrel_light, (34, 18, 6, 2))
+            pygame.draw.rect(self.image, barrel_dark, (38, 17, 2, 6))
 
     def _draw_enemy_tank(self):
-        """绘制敌方红色坦克（经典风格）"""
+        """绘制敌方红色坦克（仿经典坦克大战风格）"""
         self.image = pygame.Surface((self.width, self.height))
         self.image.fill(BLACK)
 
-        # 坦克主体
-        body_color = self.color  # 红色
-        body_rect = pygame.Rect(4, 4, 32, 32)
-        pygame.draw.rect(self.image, body_color, body_rect)
-        pygame.draw.rect(self.image, (180, 0, 0), body_rect, 1)
+        # === 履带（两侧深色履带 + 履带纹路） ===
+        track_dark = (50, 50, 50)
+        track_light = (110, 110, 110)
+        # 左履带
+        pygame.draw.rect(self.image, track_dark, (0, 2, 9, 36))
+        for i in range(0, 36, 5):
+            pygame.draw.rect(self.image, track_light, (1, 3 + i, 7, 2))
+        # 右履带
+        pygame.draw.rect(self.image, track_dark, (31, 2, 9, 36))
+        for i in range(0, 36, 5):
+            pygame.draw.rect(self.image, track_light, (32, 3 + i, 7, 2))
 
-        # 履带（两侧）
-        track_color = (80, 80, 80)
-        pygame.draw.rect(self.image, DARK_GRAY, (0, 4, 8, 32))
-        pygame.draw.rect(self.image, DARK_GRAY, (32, 4, 8, 32))
-        for i in range(0, 32, 6):
-            pygame.draw.rect(self.image, track_color, (1, i + 5, 6, 3))
-            pygame.draw.rect(self.image, track_color, (33, i + 5, 6, 3))
+        # === 车身主体 ===
+        body_dark = (140, 20, 20)       # 车身暗面
+        body_main = (200, 50, 50)       # 车身主色（红色调）
+        body_light = (240, 120, 120)    # 车身亮面
 
-        # 炮塔底座（圆形）
-        pygame.draw.circle(self.image, body_color, (20, 20), 10)
-        pygame.draw.circle(self.image, (180, 0, 0), (20, 20), 9, 1)
+        # 车身主体矩形
+        body_rect = pygame.Rect(9, 4, 22, 32)
+        pygame.draw.rect(self.image, body_main, body_rect)
 
-        # 画炮管
-        barrel_length = 16
-        barrel_width = 6
+        # 车身顶部高光条
+        pygame.draw.rect(self.image, body_light, (10, 5, 20, 4))
+
+        # 车身底部暗边
+        pygame.draw.rect(self.image, body_dark, (9, 33, 22, 3))
+
+        # 车身左右边缘暗线
+        pygame.draw.line(self.image, body_dark, (9, 5), (9, 35), 1)
+        pygame.draw.line(self.image, body_dark, (30, 5), (30, 35), 1)
+
+        # 车身中间分界线
+        pygame.draw.line(self.image, body_dark, (20, 8), (20, 30), 1)
+
+        # === 炮塔（半圆形穹顶） ===
+        turret_dark = (140, 20, 20)
+        turret_main = (220, 80, 80)
+        turret_light = (255, 160, 160)
+
+        pygame.draw.circle(self.image, turret_dark, (20, 20), 11)
+        pygame.draw.circle(self.image, turret_main, (20, 20), 9)
+        pygame.draw.circle(self.image, turret_light, (18, 18), 4)
+
+        # === 炮管 ===
+        barrel_dark = (100, 100, 100)
+        barrel_main = (160, 160, 160)
+        barrel_light = (210, 210, 210)
 
         if self.direction == "up":
-            pygame.draw.rect(self.image, GRAY, (17, 0, barrel_width, barrel_length))
-            pygame.draw.rect(self.image, WHITE, (17, 0, barrel_width, 2))
+            pygame.draw.rect(self.image, barrel_dark, (16, 5, 8, 8))
+            pygame.draw.rect(self.image, barrel_main, (17, 5, 6, 7))
+            pygame.draw.rect(self.image, barrel_main, (17, 0, 6, 7))
+            pygame.draw.rect(self.image, barrel_light, (18, 0, 2, 6))
+            pygame.draw.rect(self.image, barrel_dark, (17, 0, 6, 2))
+
         elif self.direction == "down":
-            pygame.draw.rect(self.image, GRAY, (17, 24, barrel_width, barrel_length))
-            pygame.draw.rect(self.image, WHITE, (17, 38, barrel_width, 2))
+            pygame.draw.rect(self.image, barrel_dark, (16, 27, 8, 8))
+            pygame.draw.rect(self.image, barrel_main, (17, 28, 6, 7))
+            pygame.draw.rect(self.image, barrel_main, (17, 33, 6, 7))
+            pygame.draw.rect(self.image, barrel_light, (18, 34, 2, 6))
+            pygame.draw.rect(self.image, barrel_dark, (17, 38, 6, 2))
+
         elif self.direction == "left":
-            pygame.draw.rect(self.image, GRAY, (0, 17, barrel_length, barrel_width))
-            pygame.draw.rect(self.image, WHITE, (0, 17, 2, barrel_width))
+            pygame.draw.rect(self.image, barrel_dark, (5, 16, 8, 8))
+            pygame.draw.rect(self.image, barrel_main, (5, 17, 7, 6))
+            pygame.draw.rect(self.image, barrel_main, (0, 17, 7, 6))
+            pygame.draw.rect(self.image, barrel_light, (0, 18, 6, 2))
+            pygame.draw.rect(self.image, barrel_dark, (0, 17, 2, 6))
+
         elif self.direction == "right":
-            pygame.draw.rect(self.image, GRAY, (24, 17, barrel_length, barrel_width))
-            pygame.draw.rect(self.image, WHITE, (38, 17, 2, barrel_width))
+            pygame.draw.rect(self.image, barrel_dark, (27, 16, 8, 8))
+            pygame.draw.rect(self.image, barrel_main, (28, 17, 7, 6))
+            pygame.draw.rect(self.image, barrel_main, (33, 17, 7, 6))
+            pygame.draw.rect(self.image, barrel_light, (34, 18, 6, 2))
+            pygame.draw.rect(self.image, barrel_dark, (38, 17, 2, 6))
 
     def update_image(self):
         """更新坦克图像，包括炮管方向"""
