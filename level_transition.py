@@ -185,7 +185,7 @@ class LevelTransition:
         
         # 绘制标题（放大滑动效果）
         title_text = f"第 {self.level} 关"
-        if self.level > 5:
+        if self.level >= 10:
             title_text = "最终关"
         
         # 使用缩放渲染
@@ -203,9 +203,11 @@ class LevelTransition:
         
         # 副标题
         subtitle_text = "准备战斗！"
-        if self.level > 5:
+        if self.level >= 10:
             subtitle_text = "BOSS战！"
-        elif self.level > 3:
+        elif self.level >= 7:
+            subtitle_text = "高难度！"
+        elif self.level >= 4:
             subtitle_text = "难度升级！"
         
         if self.info_alpha > 0:
