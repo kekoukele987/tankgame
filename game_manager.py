@@ -48,7 +48,6 @@ class GameManager:
 
         # 玩家
         self.player_tank = None
-        self.gun_powered = False  # 手枪道具强化状态
 
         # 音效
         self.sound = SoundManager()
@@ -219,17 +218,12 @@ class GameManager:
                     return
 
                 if event.key == pygame.K_SPACE and not self._is_game_stopped():
-                    bullet = self.player_tank.shoot()
-                    if bullet:
+                    bullets = self.player_tank.shoot()
+                    if bullets:
                         self.sound.play('shoot')
-                        if not bullet.enemy and self.gun_powered:
-                            # 替换为强化子弹：速度2倍，可摧毁钢铁墙
-                            self.bullets.remove(bullet)
-                            self.all_sprites.remove(bullet)
-                            bullet = Bullet(bullet.rect.centerx, bullet.rect.centery,
-                                           bullet.direction, bullet.speed, enemy=False, powered=True)
-                        self.all_sprites.add(bullet)
-                        self.bullets.add(bullet)
+                        for bullet in bullets:
+                            self.all_sprites.add(bullet)
+                            self.bullets.add(bullet)
 
                 if event.key == pygame.K_p:
                     self.paused = not self.paused
@@ -291,8 +285,16 @@ class GameManager:
         self._check_level_clear()
 
     def enable_gun(self):
-        """手枪道具：子弹强化，可摧毁钢铁墙"""
-        self.gun_powered = True
+        """手枪道具：子弹强化，可摧毁钢铁墙（保留兼容旧道具）"""
+        if self.player_tank:
+            self.player_tank.upgrade_level = min(self.player_tank.upgrade_level + 1, 3)
+            self.player_tank.update_image()
+
+    def upgrade_tank(self):
+        """星星道具：升级坦克火力"""
+        if self.player_tank and self.player_tank.upgrade_level < 3:
+            self.player_tank.upgrade_level += 1
+            self.player_tank.update_image()
 
     def enable_boat(self):
         """船道具：可进入水面"""
@@ -488,6 +490,8 @@ class GameManager:
             self.sound.play('game_over')
             self.sound.stop_bgm()
         else:
+            self.player_tank.upgrade_level = 0
+            self.player_tank.update_image()
             spawn_col = 8
             spawn_row = 14
             self.player_tank.rect.center = (
@@ -546,7 +550,6 @@ class GameManager:
             return
 
         # 清除残留道具、强化状态和旧地图，防止带到下一关
-        self.gun_powered = False
         for pu in list(self.powerups):
             pu.kill()
         self.powerups.empty()
@@ -608,11 +611,14 @@ class GameManager:
 
     def _draw_hud(self):
         """绘制HUD信息"""
+        level_stars = "⭐" * self.player_tank.upgrade_level if self.player_tank else ""
+        power_text = f"火力: {level_stars}" if level_stars else "火力: -"
         texts = [
             (f"生命: {self.player_tank.lives}", GREEN, 10, 10),
             (f"得分: {self.score}", YELLOW, 10, 35),
             (f"关卡: {self.level}", WHITE, 10, 60),
-            (f"剩余敌人: {len(self.enemies)}", RED, 10, 85),
+            (power_text, (255, 215, 0), 10, 85),
+            (f"剩余敌人: {len(self.enemies)}", RED, 10, 110),
         ]
         for text, color, x, y in texts:
             surf = self.font_small.render(text, True, color)

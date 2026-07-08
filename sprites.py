@@ -208,7 +208,7 @@ class Bullet(pygame.sprite.Sprite):
 
 class PowerUp(pygame.sprite.Sprite):
     """道具 - 击杀敌人后概率掉落"""
-    TYPES = ["freeze", "life", "bomb", "gun", "boat"]
+    TYPES = ["freeze", "life", "bomb", "gun", "boat", "star"]
 
     def __init__(self, x, y):
         super().__init__()
@@ -288,6 +288,20 @@ class PowerUp(pygame.sprite.Sprite):
             # 水波纹
             pygame.draw.ellipse(self.image, (50, 150, 220), (cx - 12, cy + 4, 24, 5))
 
+        elif self.type == "star":
+            # 星星图标 - 金色五角星（坦克升级）
+            color = (255, 215, 0)
+            cx, cy = self.size // 2, self.size // 2
+            outer_r = 12
+            inner_r = 5
+            points = []
+            for i in range(10):
+                angle = math.radians(i * 36 - 90)
+                r = outer_r if i % 2 == 0 else inner_r
+                points.append((cx + int(r * math.cos(angle)), cy + int(r * math.sin(angle))))
+            pygame.draw.polygon(self.image, color, points)
+            pygame.draw.polygon(self.image, (255, 255, 200), points, 1)
+
     def update(self):
         """闪烁效果"""
         self.blink_timer += 1
@@ -304,6 +318,8 @@ class PowerUp(pygame.sprite.Sprite):
             game_manager.enable_gun()
         elif self.type == "boat":
             game_manager.enable_boat()
+        elif self.type == "star":
+            game_manager.upgrade_tank()
 
     def draw_with_glow(self, screen):
         """绘制带闪烁效果的道具"""
@@ -351,6 +367,8 @@ class Tank(pygame.sprite.Sprite):
         else:
             self.hp = 1
             self.max_hp = 1
+
+        self.upgrade_level = 0  # 玩家升级等级 0-3
 
         self.image = pygame.Surface((self.width, self.height))
         self.original_color = color
@@ -451,6 +469,35 @@ class Tank(pygame.sprite.Sprite):
             pygame.draw.rect(self.image, barrel_main, (33, 17, 7, 6))
             pygame.draw.rect(self.image, barrel_light, (34, 18, 6, 2))
             pygame.draw.rect(self.image, barrel_dark, (38, 17, 2, 6))
+
+        # === 升级等级外观增强 ===
+        gold = (255, 215, 0)
+        if self.upgrade_level >= 1:
+            # 等级1+：炮管延长
+            extra = 2 if self.upgrade_level == 1 else 4
+            if self.direction == "up":
+                pygame.draw.rect(self.image, barrel_main, (17, -extra, 6, extra + 2))
+                pygame.draw.rect(self.image, barrel_light, (18, -extra, 2, extra + 1))
+            elif self.direction == "down":
+                pygame.draw.rect(self.image, barrel_main, (17, 38, 6, extra + 2))
+                pygame.draw.rect(self.image, barrel_light, (18, 39, 2, extra + 1))
+            elif self.direction == "left":
+                pygame.draw.rect(self.image, barrel_main, (-extra, 17, extra + 2, 6))
+                pygame.draw.rect(self.image, barrel_light, (-extra, 18, extra + 1, 2))
+            elif self.direction == "right":
+                pygame.draw.rect(self.image, barrel_main, (38, 17, extra + 2, 6))
+                pygame.draw.rect(self.image, barrel_light, (38, 18, extra + 1, 2))
+
+        if self.upgrade_level >= 2:
+            # 等级2+：车身两侧金色竖条
+            pygame.draw.rect(self.image, gold, (12, 6, 2, 28))
+            pygame.draw.rect(self.image, gold, (26, 6, 2, 28))
+
+        if self.upgrade_level >= 3:
+            # 等级3：车身金色高亮边框
+            pygame.draw.rect(self.image, gold, (9, 4, 22, 32), 1)
+            # 炮塔金色光环
+            pygame.draw.circle(self.image, gold, (20, 20), 12, 1)
 
     def _draw_enemy_tank(self):
         """绘制敌方坦克（根据类型使用不同配色）"""
@@ -686,19 +733,41 @@ class Tank(pygame.sprite.Sprite):
             self.update_image()
 
     def shoot(self):
-        """发射子弹"""
-        if self.shoot_cooldown == 0:
-            bullet_x, bullet_y = self.rect.center
-            if self.direction == "up":
-                bullet_y -= self.height // 2 + 5
-            elif self.direction == "down":
-                bullet_y += self.height // 2 + 5
-            elif self.direction == "left":
-                bullet_x -= self.width // 2 + 5
-            elif self.direction == "right":
-                bullet_x += self.width // 2 + 5
+        """发射子弹，返回列表（升级后可双发）"""
+        if self.shoot_cooldown > 0:
+            return []
 
-            bullet = Bullet(bullet_x, bullet_y, self.direction, enemy=self.enemy)
-            self.shoot_cooldown = self.max_cooldown
-            return bullet
-        return None
+        bx, by = self.rect.center
+        bullets = []
+
+        # 子弹速度和强化属性
+        if not self.enemy and self.upgrade_level >= 1:
+            speed = 14  # 快速子弹
+            powered = (self.upgrade_level >= 3)  # 等级3可摧毁钢铁
+        else:
+            speed = BULLET_SPEED  # 默认 10
+            powered = False
+
+        if self.direction == "up":
+            by -= self.height // 2 + 5
+        elif self.direction == "down":
+            by += self.height // 2 + 5
+        elif self.direction == "left":
+            bx -= self.width // 2 + 5
+        elif self.direction == "right":
+            bx += self.width // 2 + 5
+
+        # 等级2+：双发并行
+        if not self.enemy and self.upgrade_level >= 2:
+            offset = 7
+            if self.direction in ("up", "down"):
+                bullets.append(Bullet(bx - offset, by, self.direction, speed=speed, enemy=self.enemy, powered=powered))
+                bullets.append(Bullet(bx + offset, by, self.direction, speed=speed, enemy=self.enemy, powered=powered))
+            else:
+                bullets.append(Bullet(bx, by - offset, self.direction, speed=speed, enemy=self.enemy, powered=powered))
+                bullets.append(Bullet(bx, by + offset, self.direction, speed=speed, enemy=self.enemy, powered=powered))
+        else:
+            bullets.append(Bullet(bx, by, self.direction, speed=speed, enemy=self.enemy, powered=powered))
+
+        self.shoot_cooldown = self.max_cooldown
+        return bullets
