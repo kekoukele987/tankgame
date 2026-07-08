@@ -674,6 +674,7 @@ class GameManager:
 
         # UI
         self._draw_hud()
+        self._draw_enemy_panel()
 
     def _draw_hud(self):
         """绘制HUD信息"""
@@ -695,6 +696,60 @@ class GameManager:
         surf = self.font_small.render(controls, True, (100, 100, 100))
         cx = SCREEN_WIDTH // 2 - surf.get_width() // 2
         self.screen.blit(surf, (cx, SCREEN_HEIGHT - 25))
+
+    def _draw_enemy_panel(self):
+        """绘制右侧剩余敌人面板"""
+        total = len(self.enemies) + len(self.enemy_queue)
+        if total == 0:
+            return
+
+        # 面板位置：右侧
+        panel_x = SCREEN_WIDTH - 90
+        panel_y = 10
+
+        # 标题
+        title = self.font_small.render(f"剩余 {total}", True, WHITE)
+        self.screen.blit(title, (panel_x, panel_y))
+        panel_y += 22
+
+        # 颜色映射
+        color_map = {
+            'basic': (200, 50, 50),
+            'fast': (220, 100, 30),
+            'armored': (170, 175, 185),
+            'power': (240, 50, 40),
+        }
+
+        # 收集所有敌人类型：活跃的 + 队列中等待的
+        enemy_types = []
+        for e in self.enemies:
+            if not e.spawning:
+                enemy_types.append(e.enemy_type)
+        enemy_types.extend(self.enemy_queue)
+
+        # 每个敌人画一个小坦克图标
+        icon_size = 10
+        cols = 2
+        for i, etype in enumerate(enemy_types):
+            col = i % cols
+            row = i // cols
+            ix = panel_x + col * (icon_size + 6)
+            iy = panel_y + row * (icon_size + 6)
+
+            color = color_map.get(etype, (200, 50, 50))
+            dark = tuple(max(0, c - 60) for c in color)
+
+            # 小坦克图标
+            rect = pygame.Rect(ix, iy, icon_size, icon_size)
+            # 车身
+            pygame.draw.rect(self.screen, color, (ix + 2, iy + 2, 8, 8))
+            # 履带
+            pygame.draw.rect(self.screen, (60, 60, 60), (ix, iy + 2, 2, 8))
+            pygame.draw.rect(self.screen, (60, 60, 60), (ix + 10, iy + 2, 2, 8))
+            # 炮管（向上）
+            pygame.draw.rect(self.screen, (150, 150, 150), (ix + 5, iy - 1, 2, 4))
+            # 边框
+            pygame.draw.rect(self.screen, dark, rect, 1)
 
     def draw_pause(self):
         """绘制暂停界面"""
