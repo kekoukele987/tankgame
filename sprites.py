@@ -208,7 +208,7 @@ class Bullet(pygame.sprite.Sprite):
 
 class PowerUp(pygame.sprite.Sprite):
     """道具 - 击杀敌人后概率掉落"""
-    TYPES = ["freeze", "life", "bomb", "gun", "boat", "star"]
+    TYPES = ["freeze", "life", "bomb", "gun", "boat", "star", "helmet", "shovel"]
 
     def __init__(self, x, y):
         super().__init__()
@@ -302,6 +302,30 @@ class PowerUp(pygame.sprite.Sprite):
             pygame.draw.polygon(self.image, color, points)
             pygame.draw.polygon(self.image, (255, 255, 200), points, 1)
 
+        elif self.type == "helmet":
+            # 头盔图标 - 银色半圆护盾
+            cx, cy = self.size // 2, self.size // 2
+            # 半圆形头盔
+            helmet_rect = pygame.Rect(cx - 12, cy - 8, 24, 18)
+            pygame.draw.ellipse(self.image, (180, 180, 190), helmet_rect)
+            pygame.draw.ellipse(self.image, (220, 220, 230), (cx - 10, cy - 6, 20, 12))
+            # 护目镜横条
+            pygame.draw.rect(self.image, (80, 80, 90), (cx - 10, cy + 1, 20, 4))
+            pygame.draw.rect(self.image, (150, 150, 160), (cx - 8, cy + 2, 16, 2))
+
+        elif self.type == "shovel":
+            # 铲子图标 - 棕色铲形
+            cx, cy = self.size // 2, self.size // 2
+            # 铲柄
+            pygame.draw.rect(self.image, (139, 90, 43), (cx - 1, cy - 12, 3, 18))
+            # 铲头（梯形）
+            shovel_pts = [(cx - 8, cy + 6), (cx + 8, cy + 6),
+                          (cx + 4, cy + 2), (cx - 4, cy + 2)]
+            pygame.draw.polygon(self.image, (160, 110, 50), shovel_pts)
+            pygame.draw.polygon(self.image, (180, 130, 60), shovel_pts, 1)
+            # 铲刃
+            pygame.draw.line(self.image, (200, 200, 200), (cx - 7, cy + 6), (cx + 7, cy + 6), 1)
+
     def update(self):
         """闪烁效果"""
         self.blink_timer += 1
@@ -320,6 +344,10 @@ class PowerUp(pygame.sprite.Sprite):
             game_manager.enable_boat()
         elif self.type == "star":
             game_manager.upgrade_tank()
+        elif self.type == "helmet":
+            game_manager.enable_helmet()
+        elif self.type == "shovel":
+            game_manager.enable_shovel()
 
     def draw_with_glow(self, screen):
         """绘制带闪烁效果的道具"""

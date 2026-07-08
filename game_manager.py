@@ -58,6 +58,10 @@ class GameManager:
         self.max_active_enemies = 4
         self.spawn_cooldown = 0
 
+        # 铲子道具状态
+        self.shovel_timer = 0
+        self.shovel_walls = []  # (原砖墙, 新钢墙) 列表
+
         # 初始化第一关
         self._init_level()
 
@@ -73,6 +77,10 @@ class GameManager:
         self.explosions.empty()
         self.powerups.empty()
         self.bases.empty()
+
+        # 重置铲子状态
+        self._revert_shovel()
+        self.shovel_timer = 0
 
         # 创建玩家（黄色，原版风格）- 出生在老窝左侧
         spawn_col = 8
@@ -281,6 +289,21 @@ class GameManager:
             self._try_spawn_one()
             self.spawn_cooldown = 120  # 2秒后下一个
 
+        # 铲子倒计时
+        if self.shovel_timer > 0:
+            self.shovel_timer -= 1
+            if self.shovel_timer == 0:
+                self._revert_shovel()
+            # 最后5秒闪烁警告：砖墙变色
+            elif self.shovel_timer < 300 and self.shovel_timer % 20 < 10:
+                for brick, steel in self.shovel_walls:
+                    if steel in self.walls:
+                        # 临时改变钢墙颜色以闪烁警告
+                        steel.image.fill((180, 160, 40) if self.shovel_timer % 40 < 20 else GRAY)
+                        pygame.draw.rect(steel.image, WHITE, (0, 0, TANK_SIZE, TANK_SIZE), 2)
+                        pygame.draw.rect(steel.image, DARK_GRAY, (5, 5, 30, 30))
+                        pygame.draw.circle(steel.image, WHITE, (20, 20), 8, 2)
+
         # 通关检测
         self._check_level_clear()
 
@@ -295,6 +318,47 @@ class GameManager:
         if self.player_tank and self.player_tank.upgrade_level < 3:
             self.player_tank.upgrade_level += 1
             self.player_tank.update_image()
+
+    def enable_helmet(self):
+        """头盔道具：临时无敌护盾 10秒"""
+        if self.player_tank:
+            self.player_tank.invincible_time = 600
+
+    def enable_shovel(self):
+        """铲子道具：老窝周围砖墙临时变为钢铁墙 10秒"""
+        if not self.bases:
+            return
+        # 先还原之前可能残留的铲子效果
+        self._revert_shovel()
+
+        base = list(self.bases)[0]
+        bx = base.rect.centerx // TANK_SIZE
+        by = base.rect.centery // TANK_SIZE
+
+        for wall in list(self.walls):
+            if isinstance(wall, BrickWall):
+                wx = wall.rect.x // TANK_SIZE
+                wy = wall.rect.y // TANK_SIZE
+                if abs(wx - bx) <= 1 and abs(wy - by) <= 1:
+                    steel = SteelWall(wall.rect.x, wall.rect.y)
+                    self.walls.remove(wall)
+                    self.all_sprites.remove(wall)
+                    self.walls.add(steel)
+                    self.all_sprites.add(steel)
+                    self.shovel_walls.append((wall, steel))
+
+        self.shovel_timer = 600  # 10秒
+
+    def _revert_shovel(self):
+        """铲子效果到期，还原砖墙"""
+        for brick, steel in self.shovel_walls:
+            if steel in self.walls:
+                self.walls.remove(steel)
+            if steel in self.all_sprites:
+                self.all_sprites.remove(steel)
+            self.walls.add(brick)
+            self.all_sprites.add(brick)
+        self.shovel_walls.clear()
 
     def enable_boat(self):
         """船道具：可进入水面"""
@@ -550,6 +614,8 @@ class GameManager:
             return
 
         # 清除残留道具、强化状态和旧地图，防止带到下一关
+        self._revert_shovel()
+        self.shovel_timer = 0
         for pu in list(self.powerups):
             pu.kill()
         self.powerups.empty()
