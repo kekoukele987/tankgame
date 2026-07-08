@@ -319,17 +319,38 @@ class PowerUp(pygame.sprite.Sprite):
 
 class Tank(pygame.sprite.Sprite):
     """坦克基类（玩家和敌人共用）"""
-    def __init__(self, x, y, color, speed=PLAYER_SPEED, enemy=False):
+
+    # 敌人类型属性映射
+    ENEMY_SPEEDS = {'basic': 2, 'fast': 4, 'armored': 2, 'power': 2}
+    ENEMY_HP = {'basic': 1, 'fast': 1, 'armored': 4, 'power': 1}
+    ENEMY_SCORES = {'basic': 100, 'fast': 200, 'armored': 300, 'power': 400}
+
+    def __init__(self, x, y, color, speed=PLAYER_SPEED, enemy=False, enemy_type='basic'):
         super().__init__()
         self.width = TANK_SIZE
         self.height = TANK_SIZE
         self.color = color
-        self.speed = speed
+        self.enemy = enemy
+        self.enemy_type = enemy_type if enemy else None
+
+        # 敌方速度由类型决定，玩家速度由参数决定
+        if enemy:
+            self.speed = self.ENEMY_SPEEDS.get(enemy_type, 2)
+        else:
+            self.speed = speed
+
         self.direction = "up"
         self.shoot_cooldown = 0
         self.max_cooldown = 15
-        self.enemy = enemy
         self.lives = PLAYER_LIVES if not enemy else 1
+
+        # 敌方 HP（装甲坦克可承受多次攻击）
+        if enemy:
+            self.hp = self.ENEMY_HP.get(enemy_type, 1)
+            self.max_hp = self.hp
+        else:
+            self.hp = 1
+            self.max_hp = 1
 
         self.image = pygame.Surface((self.width, self.height))
         self.original_color = color
@@ -430,11 +451,34 @@ class Tank(pygame.sprite.Sprite):
             pygame.draw.rect(self.image, barrel_dark, (38, 17, 2, 6))
 
     def _draw_enemy_tank(self):
-        """绘制敌方红色坦克（仿经典坦克大战风格）"""
+        """绘制敌方坦克（根据类型使用不同配色）"""
         self.image = pygame.Surface((self.width, self.height))
         self.image.fill(BLACK)
 
-        # === 履带（两侧深色履带 + 履带纹路） ===
+        # 根据类型选择配色方案 (暗面, 主色, 亮面)
+        if self.enemy_type == 'basic':
+            body_dark, body_main, body_light = (140, 20, 20), (200, 50, 50), (240, 120, 120)
+            turret_dark, turret_main, turret_light = (140, 20, 20), (220, 80, 80), (255, 160, 160)
+        elif self.enemy_type == 'fast':
+            body_dark, body_main, body_light = (150, 60, 10), (220, 100, 30), (250, 160, 80)
+            turret_dark, turret_main, turret_light = (150, 60, 10), (240, 130, 50), (255, 190, 110)
+        elif self.enemy_type == 'armored':
+            # 银灰色调，随受损变暗
+            darken = int(80 * (1 - self.hp / max(self.max_hp, 1)))
+            body_dark = (100 - darken, 105 - darken, 115 - darken)
+            body_main = (160 - darken, 165 - darken, 175 - darken)
+            body_light = (200 - darken, 205 - darken, 215 - darken)
+            turret_dark = (110 - darken, 115 - darken, 125 - darken)
+            turret_main = (180 - darken, 185 - darken, 195 - darken)
+            turret_light = (220 - darken, 225 - darken, 235 - darken)
+        elif self.enemy_type == 'power':
+            body_dark, body_main, body_light = (160, 20, 10), (240, 50, 40), (255, 120, 100)
+            turret_dark, turret_main, turret_light = (160, 20, 10), (255, 70, 50), (255, 150, 130)
+        else:
+            body_dark, body_main, body_light = (140, 20, 20), (200, 50, 50), (240, 120, 120)
+            turret_dark, turret_main, turret_light = (140, 20, 20), (220, 80, 80), (255, 160, 160)
+
+        # === 履带 ===
         track_dark = (50, 50, 50)
         track_light = (110, 110, 110)
         # 左履带
@@ -447,32 +491,15 @@ class Tank(pygame.sprite.Sprite):
             pygame.draw.rect(self.image, track_light, (32, 3 + i, 7, 2))
 
         # === 车身主体 ===
-        body_dark = (140, 20, 20)       # 车身暗面
-        body_main = (200, 50, 50)       # 车身主色（红色调）
-        body_light = (240, 120, 120)    # 车身亮面
-
-        # 车身主体矩形
         body_rect = pygame.Rect(9, 4, 22, 32)
         pygame.draw.rect(self.image, body_main, body_rect)
-
-        # 车身顶部高光条
         pygame.draw.rect(self.image, body_light, (10, 5, 20, 4))
-
-        # 车身底部暗边
         pygame.draw.rect(self.image, body_dark, (9, 33, 22, 3))
-
-        # 车身左右边缘暗线
         pygame.draw.line(self.image, body_dark, (9, 5), (9, 35), 1)
         pygame.draw.line(self.image, body_dark, (30, 5), (30, 35), 1)
-
-        # 车身中间分界线
         pygame.draw.line(self.image, body_dark, (20, 8), (20, 30), 1)
 
-        # === 炮塔（半圆形穹顶） ===
-        turret_dark = (140, 20, 20)
-        turret_main = (220, 80, 80)
-        turret_light = (255, 160, 160)
-
+        # === 炮塔 ===
         pygame.draw.circle(self.image, turret_dark, (20, 20), 11)
         pygame.draw.circle(self.image, turret_main, (20, 20), 9)
         pygame.draw.circle(self.image, turret_light, (18, 18), 4)
@@ -488,27 +515,31 @@ class Tank(pygame.sprite.Sprite):
             pygame.draw.rect(self.image, barrel_main, (17, 0, 6, 7))
             pygame.draw.rect(self.image, barrel_light, (18, 0, 2, 6))
             pygame.draw.rect(self.image, barrel_dark, (17, 0, 6, 2))
-
         elif self.direction == "down":
             pygame.draw.rect(self.image, barrel_dark, (16, 27, 8, 8))
             pygame.draw.rect(self.image, barrel_main, (17, 28, 6, 7))
             pygame.draw.rect(self.image, barrel_main, (17, 33, 6, 7))
             pygame.draw.rect(self.image, barrel_light, (18, 34, 2, 6))
             pygame.draw.rect(self.image, barrel_dark, (17, 38, 6, 2))
-
         elif self.direction == "left":
             pygame.draw.rect(self.image, barrel_dark, (5, 16, 8, 8))
             pygame.draw.rect(self.image, barrel_main, (5, 17, 7, 6))
             pygame.draw.rect(self.image, barrel_main, (0, 17, 7, 6))
             pygame.draw.rect(self.image, barrel_light, (0, 18, 6, 2))
             pygame.draw.rect(self.image, barrel_dark, (0, 17, 2, 6))
-
         elif self.direction == "right":
             pygame.draw.rect(self.image, barrel_dark, (27, 16, 8, 8))
             pygame.draw.rect(self.image, barrel_main, (28, 17, 7, 6))
             pygame.draw.rect(self.image, barrel_main, (33, 17, 7, 6))
             pygame.draw.rect(self.image, barrel_light, (34, 18, 6, 2))
             pygame.draw.rect(self.image, barrel_dark, (38, 17, 2, 6))
+
+        # 装甲坦克损伤叠加暗色
+        if self.enemy_type == 'armored' and self.hp < self.max_hp:
+            darken_surf = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+            alpha = int(60 * (1 - self.hp / self.max_hp))
+            darken_surf.fill((0, 0, 0, alpha))
+            self.image.blit(darken_surf, (0, 0))
 
     def update_image(self):
         """更新坦克图像，包括炮管方向"""

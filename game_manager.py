@@ -153,11 +153,28 @@ class GameManager:
                     self.all_sprites.add(wall)
 
     def _spawn_enemies(self):
-        """生成敌人"""
-        enemy_count = min(4 + self.level, 8)
+        """生成敌人（根据关卡分配类型）"""
+        total = min(4 + self.level, 8)
 
-        for _ in range(enemy_count):
-            for _ in range(100):  # 最多尝试100次找一个空位
+        # 类型权重随关卡变化
+        if self.level <= 2:
+            weights = {'basic': 70, 'fast': 30, 'armored': 0, 'power': 0}
+        elif self.level <= 4:
+            weights = {'basic': 50, 'fast': 30, 'armored': 20, 'power': 0}
+        elif self.level <= 6:
+            weights = {'basic': 30, 'fast': 25, 'armored': 30, 'power': 15}
+        elif self.level <= 8:
+            weights = {'basic': 20, 'fast': 20, 'armored': 35, 'power': 25}
+        else:
+            weights = {'basic': 10, 'fast': 15, 'armored': 40, 'power': 35}
+
+        type_names = list(weights.keys())
+        type_probs = list(weights.values())
+        chosen_types = random.choices(type_names, weights=type_probs, k=total)
+
+        for enemy_type in chosen_types:
+            color = RED  # 颜色由 _draw_enemy_tank 根据 enemy_type 决定
+            for _ in range(100):
                 ex = random.randint(60, SCREEN_WIDTH - 60)
                 ey = random.randint(40, 200)
                 new_rect = pygame.Rect(ex - 20, ey - 20, TANK_SIZE, TANK_SIZE)
@@ -181,7 +198,7 @@ class GameManager:
                 if not collision:
                     break
 
-            enemy = Tank(ex, ey, RED, speed=4, enemy=True)
+            enemy = Tank(ex, ey, color, enemy=True, enemy_type=enemy_type)
             self.all_sprites.add(enemy)
             self.enemies.add(enemy)
 
@@ -282,13 +299,14 @@ class GameManager:
         self.player_tank.lives += 1
 
     def bomb_all_enemies(self):
-        """炸死全部敌人"""
+        """炸死全部敌人（炸弹一击必杀，无视 HP）"""
         self.sound.play('explosion')
         for enemy in list(self.enemies):
             explosion = Explosion(enemy.rect.centerx, enemy.rect.centery)
             self.all_sprites.add(explosion)
             self.explosions.add(explosion)
-            self.score += 100
+            score_map = {'basic': 100, 'fast': 200, 'armored': 300, 'power': 400}
+            self.score += score_map.get(enemy.enemy_type, 100)
             enemy.kill()
 
     def _check_powerup_pickup(self):
@@ -418,15 +436,26 @@ class GameManager:
     def _on_enemy_hit(self, bullet, enemy):
         """玩家子弹击中敌人"""
         bullet.kill()
+        enemy.hp -= 1
+
+        if enemy.hp > 0:
+            # 装甲坦克未击毁，显示损伤
+            enemy.update_image()
+            self.sound.play('wall_hit')
+            return
+
+        # 击毁
         enemy.kill()
-        self.score += 100
+        score_map = {'basic': 100, 'fast': 200, 'armored': 300, 'power': 400}
+        self.score += score_map.get(enemy.enemy_type, 100)
         self.sound.play('explosion')
         explosion = Explosion(enemy.rect.centerx, enemy.rect.centery)
         self.all_sprites.add(explosion)
         self.explosions.add(explosion)
 
-        # 20%概率掉落道具
-        if random.random() < 0.2:
+        # 道具掉落：power 类型 100%，其他 20%
+        drop_chance = 1.0 if enemy.enemy_type == 'power' else 0.2
+        if random.random() < drop_chance:
             self._spawn_powerup(enemy.rect.centerx, enemy.rect.centery)
 
     def _spawn_powerup(self, x, y):
