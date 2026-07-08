@@ -10,6 +10,7 @@ from game_manager import GameManager
 def main():
     """游戏主入口 - 初始化并启动游戏"""
     pygame.init()
+    pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
     pygame.display.set_caption("坦克大战")
     # 禁用输入法文本处理，防止中文输入法拦截 WASD 等按键
     pygame.key.stop_text_input()

@@ -13,6 +13,7 @@ from config import (
 from sprites import Tank, BrickWall, SteelWall, Water, Explosion, Bullet, PowerUp, Base
 from level_transition import LevelTransition
 from map_editor import grid_to_sprites, load_map, MAP_FILE, MapEditor
+from sounds import SoundManager
 
 
 class GameManager:
@@ -48,6 +49,9 @@ class GameManager:
         # 玩家
         self.player_tank = None
         self.gun_powered = False  # 手枪道具强化状态
+
+        # 音效
+        self.sound = SoundManager()
 
         # 初始化第一关
         self._init_level()
@@ -198,6 +202,7 @@ class GameManager:
                 if event.key == pygame.K_SPACE and not self._is_game_stopped():
                     bullet = self.player_tank.shoot()
                     if bullet:
+                        self.sound.play('shoot')
                         if not bullet.enemy and self.gun_powered:
                             # 替换为强化子弹：速度2倍，可摧毁钢铁墙
                             self.bullets.remove(bullet)
@@ -238,6 +243,7 @@ class GameManager:
             if random.randint(0, 100) < 3:
                 bullet = enemy.shoot()
                 if bullet:
+                    self.sound.play('enemy_shoot')
                     self.all_sprites.add(bullet)
                     self.bullets.add(bullet)
 
@@ -277,6 +283,7 @@ class GameManager:
 
     def bomb_all_enemies(self):
         """炸死全部敌人"""
+        self.sound.play('explosion')
         for enemy in list(self.enemies):
             explosion = Explosion(enemy.rect.centerx, enemy.rect.centery)
             self.all_sprites.add(explosion)
@@ -290,6 +297,7 @@ class GameManager:
             return
         hit = pygame.sprite.spritecollide(self.player_tank, self.powerups, True)
         for powerup in hit:
+            self.sound.play('powerup')
             powerup.apply(self)
 
     def _check_bullet_collision(self, player_bullet, enemy_bullet):
@@ -337,6 +345,7 @@ class GameManager:
                     if self._check_bullet_collision(pb, eb):
                         bullets_to_remove.add(pb)
                         bullets_to_remove.add(eb)
+                        self.sound.play('wall_hit')
                         explosion = Explosion((pb.rect.centerx + eb.rect.centerx) // 2,
                                               (pb.rect.centery + eb.rect.centery) // 2,
                                               size=20)
@@ -379,6 +388,8 @@ class GameManager:
                     if bullet.rect.colliderect(base.rect):
                         base.kill()
                         bullet.kill()
+                        self.sound.play('base_destroyed')
+                        self.sound.stop_bgm()
                         explosion = Explosion(base.rect.centerx, base.rect.centery, size=TANK_SIZE)
                         self.all_sprites.add(explosion)
                         self.explosions.add(explosion)
@@ -394,6 +405,8 @@ class GameManager:
                 for enemy in self.enemies:
                     if enemy.rect.colliderect(base.rect):
                         base.kill()
+                        self.sound.play('base_destroyed')
+                        self.sound.stop_bgm()
                         explosion = Explosion(base.rect.centerx, base.rect.centery, size=TANK_SIZE)
                         self.all_sprites.add(explosion)
                         self.explosions.add(explosion)
@@ -407,6 +420,7 @@ class GameManager:
         bullet.kill()
         enemy.kill()
         self.score += 100
+        self.sound.play('explosion')
         explosion = Explosion(enemy.rect.centerx, enemy.rect.centery)
         self.all_sprites.add(explosion)
         self.explosions.add(explosion)
@@ -425,6 +439,7 @@ class GameManager:
         """敌方子弹击中玩家"""
         bullet.kill()
         self.player_tank.lives -= 1
+        self.sound.play('explosion')
 
         explosion = Explosion(self.player_tank.rect.centerx, self.player_tank.rect.centery)
         self.all_sprites.add(explosion)
@@ -432,6 +447,8 @@ class GameManager:
 
         if self.player_tank.lives <= 0:
             self.game_over = True
+            self.sound.play('game_over')
+            self.sound.stop_bgm()
         else:
             spawn_col = 8
             spawn_row = 14
@@ -444,6 +461,7 @@ class GameManager:
     def _on_wall_hit(self, bullet, walls_hit):
         """子弹击中墙壁"""
         bullet.kill()
+        self.sound.play('wall_hit')
         for wall in walls_hit:
             if hasattr(wall, 'hit'):
                 # 强化子弹可以摧毁钢铁墙，普通子弹不能
@@ -478,6 +496,8 @@ class GameManager:
         self.level += 1
         if self.level > MAX_LEVEL:
             self.victory = True
+            self.sound.play('victory')
+            self.sound.stop_bgm()
             return
 
         # 播放过渡动画
@@ -641,6 +661,7 @@ class GameManager:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE or event.key == pygame.K_RETURN:
                         waiting = False
+                        self.sound.play('game_start')
                     if event.key == pygame.K_c:
                         # 进入自定义地图编辑器
                         editor = MapEditor(self.screen)
@@ -709,6 +730,9 @@ class GameManager:
         if not self.running:
             pygame.quit()
             sys.exit()
+
+        # 开始背景音乐
+        self.sound.play_bgm()
 
         while self.running:
             self.clock.tick(FPS)
