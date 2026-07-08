@@ -53,6 +53,12 @@ class GameManager:
         # 音效
         self.sound = SoundManager()
 
+        # 敌方出生系统
+        self.spawn_points = [(60, 20), (420, 20), (740, 20)]
+        self.enemy_queue = []
+        self.max_active_enemies = 4
+        self.spawn_cooldown = 0
+
         # 初始化第一关
         self._init_level()
 
@@ -153,7 +159,7 @@ class GameManager:
                     self.all_sprites.add(wall)
 
     def _spawn_enemies(self):
-        """生成敌人（根据关卡分配类型）"""
+        """生成敌人队列（根据关卡分配类型），立即出生第一批"""
         total = min(4 + self.level, 8)
 
         # 类型权重随关卡变化
@@ -170,37 +176,33 @@ class GameManager:
 
         type_names = list(weights.keys())
         type_probs = list(weights.values())
-        chosen_types = random.choices(type_names, weights=type_probs, k=total)
+        self.enemy_queue = random.choices(type_names, weights=type_probs, k=total)
+        self.spawn_cooldown = 0
 
-        for enemy_type in chosen_types:
-            color = RED  # 颜色由 _draw_enemy_tank 根据 enemy_type 决定
-            for _ in range(100):
-                ex = random.randint(60, SCREEN_WIDTH - 60)
-                ey = random.randint(40, 200)
-                new_rect = pygame.Rect(ex - 20, ey - 20, TANK_SIZE, TANK_SIZE)
+        # 立即出生第一批（最多 max_active_enemies 个）
+        for _ in range(min(self.max_active_enemies, len(self.enemy_queue))):
+            self._try_spawn_one()
 
-                collision = False
-                if self.player_tank and new_rect.colliderect(self.player_tank.rect):
-                    collision = True
-                for enemy in self.enemies:
-                    if new_rect.colliderect(enemy.rect):
-                        collision = True
-                        break
-                for wall in self.walls:
-                    if new_rect.colliderect(wall.rect):
-                        collision = True
-                        break
-                for water in self.waters:
-                    if new_rect.colliderect(water.rect):
-                        collision = True
-                        break
+    def _try_spawn_one(self):
+        """从队列中取一个敌人，在空闲出生点生成"""
+        if not self.enemy_queue:
+            return
 
-                if not collision:
+        enemy_type = self.enemy_queue.pop(0)
+
+        # 找一个未被占用的出生点
+        for sp in self.spawn_points:
+            sp_rect = pygame.Rect(sp[0] - 20, sp[1] - 20, TANK_SIZE, TANK_SIZE)
+            occupied = False
+            for enemy in self.enemies:
+                if sp_rect.colliderect(enemy.rect):
+                    occupied = True
                     break
-
-            enemy = Tank(ex, ey, color, enemy=True, enemy_type=enemy_type)
-            self.all_sprites.add(enemy)
-            self.enemies.add(enemy)
+            if not occupied:
+                enemy = Tank(sp[0], sp[1], RED, enemy=True, enemy_type=enemy_type)
+                self.all_sprites.add(enemy)
+                self.enemies.add(enemy)
+                return
 
     # ========== 事件处理 ==========
 
@@ -277,6 +279,13 @@ class GameManager:
 
         # 敌人碰撞分离
         self._separate_enemies()
+
+        # 敌方出生调度
+        if self.spawn_cooldown > 0:
+            self.spawn_cooldown -= 1
+        elif len(self.enemy_queue) > 0 and len(self.enemies) < self.max_active_enemies:
+            self._try_spawn_one()
+            self.spawn_cooldown = 120  # 2秒后下一个
 
         # 通关检测
         self._check_level_clear()
@@ -519,7 +528,7 @@ class GameManager:
 
     def _check_level_clear(self):
         """检查是否通关"""
-        if len(self.enemies) > 0:
+        if len(self.enemies) > 0 or len(self.enemy_queue) > 0:
             return
 
         self.level += 1
@@ -583,6 +592,13 @@ class GameManager:
             pygame.draw.line(self.screen, (20, 20, 20), (x, 0), (x, SCREEN_HEIGHT))
         for y in range(0, SCREEN_HEIGHT, TANK_SIZE):
             pygame.draw.line(self.screen, (20, 20, 20), (0, y), (SCREEN_WIDTH, y))
+
+        # 出生点标记（灰色虚线框闪烁）
+        blink = (pygame.time.get_ticks() // 500) % 2 == 0
+        if blink and self.enemy_queue:
+            for sp in self.spawn_points:
+                rect = pygame.Rect(sp[0] - 20, sp[1] - 20, TANK_SIZE, TANK_SIZE)
+                pygame.draw.rect(self.screen, (80, 80, 80), rect, 2)
 
         # 精灵
         self.all_sprites.draw(self.screen)

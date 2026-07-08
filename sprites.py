@@ -363,6 +363,8 @@ class Tank(pygame.sprite.Sprite):
         self.blink_timer = 0
         self.frozen_time = 0  # 被冰冻剩余时间
         self.boat_mode = False  # 船道具：可进入水面
+        self.spawning = True if enemy else False  # 敌方出生动画
+        self.spawn_timer = 90 if enemy else 0  # 1.5秒 (60fps)
 
     def _draw_player_tank(self):
         """绘制玩家黄色坦克（仿经典坦克大战风格）"""
@@ -550,6 +552,17 @@ class Tank(pygame.sprite.Sprite):
 
     def update(self, keys=None, walls=None, tanks=None, player=None):
         """更新状态"""
+        # 出生动画（敌方专用）
+        if self.spawning:
+            self.spawn_timer -= 1
+            if self.spawn_timer <= 0:
+                self.spawning = False
+                self.image.set_alpha(255)
+            else:
+                # 每6帧切换可见/不可见
+                self.image.set_alpha(0 if (self.spawn_timer // 6) % 2 == 0 else 255)
+            return  # 出生期间不执行任何操作
+
         # 无敌闪烁
         if self.invincible_time > 0:
             self.invincible_time -= 1
